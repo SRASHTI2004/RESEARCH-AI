@@ -79,7 +79,7 @@ research-ai/
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/your-username/research-ai.git
+git clone https://github.com/SRASHTI2004/RESEARCH-AI
 cd research-ai
 ```
 
