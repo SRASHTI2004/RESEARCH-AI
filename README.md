@@ -24,10 +24,9 @@ The feedback loop is the key feature — the system improves its own output unti
 
 ## Screenshots
 
-| Input | Agents Running | Final Report |
-|---|---|---|
-| ![Input](screenshots/01-input.png) | ![Processing](screenshots/02-processing.png) | ![Output](screenshots/03-output.png) |
-
+| Input | Agents Running | Final Report | Sources |
+|---|---|---|---||---|---|---|
+| ![Input](screenshots/01-input.png) | ![Processing](screenshots/02-processing.png) | ![Output](screenshots/03-output.png) | ![Sources](screenshots/04-sources.png) |
 ---
 
 ## Tech Stack
