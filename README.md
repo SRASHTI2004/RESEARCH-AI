@@ -118,7 +118,7 @@ Open browser → http://localhost:8501
 
 ## Built by
 
-**Srashti Choudhary** — Final Year IT Student @ MAIT, Delhi  
+**Srashti Choudhary** — IT Graduate @ MAIT, Delhi  
 Aspiring AI/Backend Engineer
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://www.linkedin.com/in/srashti-choudhary)
