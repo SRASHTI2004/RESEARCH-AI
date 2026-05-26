@@ -1,56 +1,53 @@
 # ResearchAI 🔬
+> Enter any topic. Get a full structured research report — written, reviewed, and self-improved by 4 AI agents.
 
-A multi-agent AI research tool that searches the live internet, analyzes data, writes a structured report, and self-improves it — all automatically.
+![ResearchAI Demo](screenshots/03-output.png)
 
-Built with LangGraph, Groq, Tavily, FastAPI, and Streamlit.
-
----
-
-## How it works
-
-You enter any topic. Then 4 AI agents take over:
-
-| Agent | Job |
-|-------|-----|
-| Researcher | Searches the live internet using Tavily |
-| Analyzer | Extracts insights, patterns, SWOT analysis |
-| Writer | Writes a 7-section professional report |
-| Reviewer | Scores the report, sends back if quality < 7/10 |
-
-The reviewer creates a feedback loop — if the report scores below 7/10, it automatically goes back to the writer for improvement.
+👉 [**Try the live app →**](https://research-ai-txusrtrkakifrcnmzozwsn.streamlit.app/)
 
 ---
 
-## Demo
+## What it does
 
-> Enter any topic → get a full research report in minutes
+You type a topic. Four AI agents take over automatically:
 
-Example topics tried:
-- AI agents in 2026
-- EV battery technology
-- Quantum computing breakthroughs
-- Climate tech funding
+| Agent | What it does |
+|---|---|
+| 🔍 Researcher | Searches the live internet using Tavily |
+| 🧠 Analyzer | Extracts insights, patterns, and SWOT analysis |
+| ✍️ Writer | Writes a 7-section structured report |
+| ✅ Reviewer | Scores the report 1–10. If score < 7, sends it back for rewriting |
+
+The feedback loop is the key feature — the system improves its own output until quality passes the threshold.
+
+---
+
+## Screenshots
+
+| Input | Agents Running | Final Report |
+|---|---|---|
+| ![Input](screenshots/01-input.png) | ![Processing](screenshots/02-processing.png) | ![Output](screenshots/03-output.png) |
 
 ---
 
 ## Tech Stack
 
 | Tool | Purpose |
-|------|---------|
+|---|---|
 | LangGraph | Agent orchestration + feedback loop |
-| Groq (Llama 3.3 70B) | LLM for all agents |
+| Groq (Llama 3.3 70B) | LLM for all 4 agents |
 | Tavily | Real-time web search |
 | FastAPI | REST API backend |
 | Streamlit | Frontend UI |
 
 ---
 
-## What makes this different
+## What makes this different from a basic chatbot
 
-- **Real web search** — agents search the actual internet, not just LLM memory
-- **Feedback loop** — reviewer scores quality 1-10 and auto-improves if needed
-- **Source tracking** — every web source used is shown in the UI
-- **Export** — download final report as .txt or .md
+- **Real web search** — agents read the actual internet, not LLM memory
+- **Self-improving output** — reviewer scores quality and triggers rewrites automatically
+- **Source transparency** — every web source used is shown in the final report
+- **Export** — download the final report as `.txt` or `.md`
 
 ---
 
@@ -59,28 +56,28 @@ Example topics tried:
 research-ai/
 ├── app/
 │   ├── agents/
-│   │   ├── researcher.py
-│   │   ├── analyzer.py
-│   │   ├── writer.py
-│   │   └── reviewer.py
+│   │   ├── researcher.py   # Tavily search agent
+│   │   ├── analyzer.py     # Insight extraction
+│   │   ├── writer.py       # Report generation
+│   │   └── reviewer.py     # Quality scoring + feedback
 │   ├── tools/
 │   │   └── search.py
 │   ├── config.py
-│   └── graph.py
-├── main.py
-├── streamlit_app.py
+│   └── graph.py            # LangGraph pipeline
+├── main.py                 # FastAPI backend
+├── streamlit_app.py        # Streamlit frontend
 ├── requirements.txt
-└── .env.example
-
+├── .env.example
+└── screenshots/
 
 ---
 
-## Setup & Run
+## Local Setup
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/SRASHTI2004/RESEARCH-AI
-cd research-ai
+git clone https://github.com/SRASHTI2004/RESEARCH-AI.git
+cd RESEARCH-AI
 ```
 
 ### 2. Create virtual environment
@@ -103,31 +100,27 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 ```
-Open `.env` and add your keys:
+Open `.env` and fill in:
 
-GROQ_API_KEY=your_key_here
-TAVILY_API_KEY=your_key_here
-
-Get free keys here:
-- Groq → https://console.groq.com
-- Tavily → https://app.tavily.com
+GROQ_API_KEY=your_key_here      # free at console.groq.com
+TAVILY_API_KEY=your_key_here    # free at app.tavily.com
 
 ### 5. Run the app
-
-Terminal 1 — Backend:
 ```bash
+# Terminal 1 — Backend
 uvicorn main:app --reload
-```
 
-Terminal 2 — Frontend:
-```bash
+# Terminal 2 — Frontend
 streamlit run streamlit_app.py
 ```
-
 Open browser → http://localhost:8501
 
 ---
 
 ## Built by
 
-Srashti — [@SRASHTI2004](https://github.com/SRASHTI2004)
+**Srashti Choudhary** — Final Year IT Student @ MAIT, Delhi  
+Aspiring AI/Backend Engineer
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://www.linkedin.com/in/srashti-choudhary)
+[![GitHub](https://img.shields.io/badge/GitHub-SRASHTI2004-black)](https://github.com/SRASHTI2004)
