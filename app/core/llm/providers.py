@@ -24,6 +24,16 @@ def _model_for_stage(default_model: str, writer_model: str, stage: str) -> str:
     return writer_model if stage == "writer" else default_model
 
 
+def _as_text(content: str | list[str | dict]) -> str:
+    """LangChain's AIMessage.content is typed str | list[...] to allow for
+    multimodal responses; our text-only chat models always return a plain
+    str at runtime, but mypy doesn't know that — so we assert it instead of
+    silencing the check."""
+    if not isinstance(content, str):
+        raise TypeError(f"Expected a plain text response, got {type(content).__name__}")
+    return content
+
+
 class GeminiProvider(LLMProvider):
     name = "gemini"
 
@@ -41,7 +51,7 @@ class GeminiProvider(LLMProvider):
             timeout=settings.llm_timeout_seconds,
         )
         try:
-            return client.invoke(prompt).content
+            return _as_text(client.invoke(prompt).content)
         except Exception as exc:
             if _looks_like_rate_limit(exc):
                 raise ProviderRateLimited(str(exc)) from exc
@@ -66,7 +76,7 @@ class GroqProvider(LLMProvider):
             max_retries=0,
         )
         try:
-            return client.invoke(prompt).content
+            return _as_text(client.invoke(prompt).content)
         except Exception as exc:
             if _looks_like_rate_limit(exc):
                 raise ProviderRateLimited(str(exc)) from exc
@@ -86,7 +96,7 @@ class OllamaProvider(LLMProvider):
             base_url=settings.ollama_base_url,
             temperature=temperature,
         )
-        return client.invoke(prompt).content
+        return _as_text(client.invoke(prompt).content)
 
 
 PROVIDER_REGISTRY: dict[str, type[LLMProvider]] = {

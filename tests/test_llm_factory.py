@@ -55,7 +55,7 @@ def test_rate_limit_triggers_immediate_fallback_with_clear_message(monkeypatch):
 
 def test_no_configured_providers_raises_clear_error(monkeypatch):
     unconfigured = _StubProvider("primary", lambda n: "unused")
-    unconfigured.is_configured = lambda: False
+    monkeypatch.setattr(unconfigured, "is_configured", lambda: False)
 
     monkeypatch.setattr("app.core.llm.factory._ordered_providers", lambda: [unconfigured])
 

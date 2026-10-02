@@ -14,8 +14,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> UserOut:
     try:
         user = auth_service.register(db, payload.email, payload.password)
-    except auth_service.EmailAlreadyRegisteredError:
-        raise HTTPException(status_code=409, detail="Email already registered")
+    except auth_service.EmailAlreadyRegisteredError as exc:
+        raise HTTPException(status_code=409, detail="Email already registered") from exc
     return UserOut.model_validate(user)
 
 
@@ -33,8 +33,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResponse:
     try:
         user = auth_service.refresh_access_token(db, payload.refresh_token)
-    except auth_service.InvalidRefreshTokenError:
-        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    except auth_service.InvalidRefreshTokenError as exc:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token") from exc
 
     access_token, refresh_token = auth_service.issue_tokens(user)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)

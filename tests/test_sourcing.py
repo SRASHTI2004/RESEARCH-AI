@@ -19,7 +19,9 @@ def test_gather_sources_dedupes_by_url(monkeypatch):
         {
             "overview": [duplicate],
             "news": [duplicate],  # same URL turns up under a different query
-            "technology": [SearchResult(title="Acme Eng Blog", url="https://acme.example.com/blog", snippet="s2")],
+            "technology": [
+                SearchResult(title="Acme Eng Blog", url="https://acme.example.com/blog", snippet="s2")
+            ],
             "interview": [],
         }
     )
@@ -37,7 +39,11 @@ def test_gather_sources_dedupes_by_url(monkeypatch):
 
 def test_gather_sources_falls_back_to_snippet_when_fetch_fails(monkeypatch):
     provider = _StubSearchProvider(
-        {"overview": [SearchResult(title="Acme Home", url="https://acme.example.com", snippet="fallback text")]}
+        {
+            "overview": [
+                SearchResult(title="Acme Home", url="https://acme.example.com", snippet="fallback text")
+            ]
+        }
     )
     monkeypatch.setattr("app.pipeline.sourcing.get_search_provider", lambda: provider)
     monkeypatch.setattr("app.pipeline.sourcing.fetch_page_text", lambda url, **kw: None)

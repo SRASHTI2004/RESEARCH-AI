@@ -21,8 +21,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     try:
         payload = security.decode_token(token)
-    except security.TokenError:
-        raise credentials_error
+    except security.TokenError as exc:
+        raise credentials_error from exc
 
     if payload.get("type") != "access":
         raise credentials_error

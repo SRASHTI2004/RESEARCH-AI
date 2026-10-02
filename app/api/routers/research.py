@@ -4,9 +4,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
+from app.repositories import research_repository as repo
 from app.schemas.research import ResearchRequest, ResearchResponse, ResearchSummary
 from app.services.research_service import enqueue_research
-from app.repositories import research_repository as repo
 
 router = APIRouter(prefix="/research", tags=["research"])
 

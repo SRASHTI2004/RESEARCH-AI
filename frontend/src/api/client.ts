@@ -118,7 +118,8 @@ export const api = {
 
   me: () => request<User>("/auth/me"),
 
-  createResearch: (company: string) => request<ResearchJob>("/research", { method: "POST", body: { company } }),
+  createResearch: (company: string) =>
+    request<ResearchJob>("/research", { method: "POST", body: { company } }),
 
   getResearch: (id: string) => request<ResearchJob>(`/research/${id}`),
 

@@ -27,7 +27,9 @@ export function NewBriefPage() {
   return (
     <div>
       <h1>New Company Research Brief</h1>
-      <p className="hint">Enter a company name to get a sourced brief: overview, recent news, tech stack, interview prep.</p>
+      <p className="hint">
+        Enter a company name to get a sourced brief: overview, recent news, tech stack, interview prep.
+      </p>
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <label>
           Company name

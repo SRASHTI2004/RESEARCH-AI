@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -36,7 +35,7 @@ class ResearchResponse(BaseModel):
     final_report: str
     sources: list[Source]
     status: str
-    error: Optional[str] = None
+    error: str | None = None
     created_at: datetime
     updated_at: datetime
 

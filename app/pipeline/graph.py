@@ -1,4 +1,4 @@
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 from langgraph.graph import END, StateGraph
 
@@ -16,7 +16,7 @@ class AgentState(TypedDict):
     final_report: str
     sources: list[dict]
     status: str
-    error: Optional[str]
+    error: str | None
 
 
 def _route_on_failure(state: AgentState) -> str:

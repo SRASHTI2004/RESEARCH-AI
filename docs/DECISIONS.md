@@ -324,3 +324,68 @@ at the bottom of each phase section.
   by inspection. A manual click-through is still owed
   (register → new brief → watch it progress → history) before considering
   this phase fully done.
+
+## Phase 7 — DevOps & quality gates
+
+- **mypy needed the pydantic plugin** (`plugins = ["pydantic.mypy"]` in
+  `pyproject.toml`) — without it, mypy can't see past pydantic's
+  metaclass-generated `__init__` and wrongly flagged `ChatGoogleGenerativeAI`'s
+  `google_api_key` kwarg (actually valid — it's a field alias) as an
+  unexpected argument. With the plugin, zero errors.
+- **`B008` (Depends-in-default-args) is ignored project-wide** in Ruff —
+  it's FastAPI's own documented, idiomatic dependency-injection pattern,
+  not a bug; the bugbear rule just doesn't special-case FastAPI.
+- **Found and discarded a real upgrade attempt mid-phase:**
+  `langchain-google-genai` 2.0.9 (installed since Phase 1) emits a
+  `FutureWarning` that its underlying `google.generativeai` SDK is fully
+  deprecated upstream in favor of `google.genai`. Tried upgrading to
+  `langchain-google-genai==4.4.0` (which uses the new SDK) — it requires
+  `langchain-core>=1.0`, which conflicts with `langchain-groq==0.2.3`,
+  `langchain-ollama==0.2.3`, and `langgraph==0.2.62` (all pinned to
+  `langchain-core<0.4`). Upgrading just one provider package would mean
+  upgrading the entire LangChain stack simultaneously — real breaking-change
+  risk, out of scope for a quality-gates phase. Reverted to 2.0.9 (still
+  functional, just unmaintained upstream) and documented this as a known
+  tech-debt item / upgrade path rather than silently leaving the warning
+  unexplained. Good interview talking point: dependency version skew in a
+  fast-moving ecosystem, and when an upgrade is/isn't worth the risk.
+- **A real, interview-worthy bug mypy caught:** `AIMessage.content` from
+  every LangChain chat model is typed `str | list[str | dict]` (to allow
+  multimodal responses), but `LLMProvider.invoke()` promises a plain `str`.
+  Every provider was silently relying on it always being a string at
+  runtime for our text-only prompts. Added `_as_text()` to assert this
+  explicitly (raises `TypeError` if it's ever not a string) instead of
+  suppressing the mypy error — turns a latent assumption into a checked
+  one.
+- **Dockerfiles/docker-compose.yml are written but NOT verified live** —
+  Docker wasn't available yet (checked again this phase;
+  still absent). Validated what's possible without it: `docker-compose.yml`
+  parses as valid YAML with the expected 5 services
+  (postgres/redis/api/worker/frontend), and the Postgres-compatible
+  schema/`DATABASE_URL`-only design from Phase 3 means the same migrations
+  that ran against SQLite here should apply unchanged against the
+  Postgres container. **Still to do: run `docker compose up --build`
+  once** to confirm — this is the single biggest unverified piece of the
+  whole rebuild.
+- **`api`/`worker` share one Dockerfile image**, differing only by the
+  `command:` override in docker-compose (`worker` runs
+  `celery -A app.worker.celery_app worker` instead of the default
+  `alembic upgrade head && uvicorn ...`) — avoids maintaining two nearly
+  identical images.
+- **Vite bakes `VITE_API_URL` in at build time, not runtime** — so
+  `frontend/Dockerfile` takes it as a build `ARG`, not a container
+  `environment:` variable (a runtime env var would have no effect; the
+  value has to be set before `npm run build` runs inside the image).
+- **CI needs no API keys or infra at all**: the backend job never touches
+  Groq/Gemini/a real database (everything's mocked per Phase 1-3's test
+  design) and Celery defaults to eager mode, so `CELERY_TASK_ALWAYS_EAGER`
+  doesn't even need setting in CI. This was a deliberate design payoff
+  from earlier phases, not incidental — a CI pipeline that needed real
+  secrets or `services:` containers would be meaningfully more complex to
+  set up and maintain.
+- **Pre-commit's mypy/frontend-lint hooks use `language: system`**, not an
+  isolated mirror environment — they run via whatever `mypy`/`npm` is on
+  PATH (the project's own venv must be active). This is deliberate: an
+  isolated mirror would need its own duplicate copy of every stub package
+  and the pydantic plugin config to agree with `pyproject.toml`, which is
+  more to keep in sync than it's worth here.

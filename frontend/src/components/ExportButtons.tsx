@@ -50,7 +50,10 @@ async function exportPdf(job: ResearchJob) {
 export function ExportButtons({ job }: { job: ResearchJob }) {
   return (
     <div className="export-buttons">
-      <button type="button" onClick={() => download(`${job.company}-brief.md`, buildMarkdown(job), "text/markdown")}>
+      <button
+        type="button"
+        onClick={() => download(`${job.company}-brief.md`, buildMarkdown(job), "text/markdown")}
+      >
         Export Markdown
       </button>
       <button type="button" onClick={() => void exportPdf(job)}>

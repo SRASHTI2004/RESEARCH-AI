@@ -6,7 +6,7 @@ def test_run_research_job_persists_status_after_each_stage(db_session, monkeypat
     """The whole point of streaming (vs. invoke()) is that the job row's
     status is updated after every stage completes, not just once at the
     end — this is what a polling frontend actually observes."""
-    seen_statuses = []
+    seen_statuses: list[str] = []
 
     def _fake_invoke(prompt, *, temperature=0.3, stage="default"):
         # db_session and the task's own session share one physical SQLite
@@ -14,13 +14,17 @@ def test_run_research_job_persists_status_after_each_stage(db_session, monkeypat
         # transaction first so this SELECT sees the task's latest commits
         # instead of a stale snapshot from before this test's own setup.
         db_session.rollback()
-        seen_statuses.append(repo.get_job(db_session, job.id).status)
+        current = repo.get_job(db_session, job.id)
+        assert current is not None
+        seen_statuses.append(current.status)
         return f"MOCKED[{stage}]"
 
     monkeypatch.setattr("app.core.llm.invoke_llm", _fake_invoke)
     monkeypatch.setattr(
         "app.pipeline.agents.researcher.gather_sources",
-        lambda company, **kw: [{"index": 1, "title": "T", "url": "https://u", "snippet": "s", "content": "c"}],
+        lambda company, **kw: [
+            {"index": 1, "title": "T", "url": "https://u", "snippet": "s", "content": "c"}
+        ],
     )
 
     job = repo.create_job(db_session, "Acme Corp")
@@ -28,6 +32,7 @@ def test_run_research_job_persists_status_after_each_stage(db_session, monkeypat
 
     db_session.rollback()
     final = repo.get_job(db_session, job.id)
+    assert final is not None
     assert final.status == "done"
     assert "MOCKED[reviewer]" in final.final_report
 

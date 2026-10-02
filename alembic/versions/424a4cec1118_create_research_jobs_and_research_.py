@@ -1,7 +1,7 @@
 """create research_jobs and research_sources tables
 
 Revision ID: 424a4cec1118
-Revises: 
+Revises:
 Create Date: 2026-10-02 10:38:09.783928
 
 """

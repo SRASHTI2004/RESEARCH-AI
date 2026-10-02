@@ -21,7 +21,9 @@ describe("api client", () => {
   it("login stores both tokens", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ access_token: "a1", refresh_token: "r1", token_type: "bearer" })),
+      vi
+        .fn()
+        .mockResolvedValue(jsonResponse({ access_token: "a1", refresh_token: "r1", token_type: "bearer" })),
     );
 
     await api.login("a@b.com", "password123");
@@ -68,12 +70,11 @@ describe("api client", () => {
   it("surfaces a Pydantic-style validation error as a readable message", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        jsonResponse(
-          { detail: [{ msg: "company cannot be blank", type: "value_error" }] },
-          422,
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ detail: [{ msg: "company cannot be blank", type: "value_error" }] }, 422),
         ),
-      ),
     );
 
     await expect(api.createResearch("")).rejects.toThrow("company cannot be blank");

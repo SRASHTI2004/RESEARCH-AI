@@ -1,5 +1,5 @@
 import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
-import { useAuth } from "./auth/AuthContext";
+import { useAuth } from "./auth/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { BriefPage } from "./pages/BriefPage";
 import { HistoryPage } from "./pages/HistoryPage";

@@ -1,0 +1,38 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(app|tests)/
+      - id: ruff-format
+        files: ^(app|tests)/
+
+  # `language: system` — runs via whatever `mypy`/`npm` is on PATH, so the
+  # project's venv must be active (not an isolated pre-commit mirror env).
+  # That's deliberate: it sees the real pinned deps and the pydantic mypy
+  # plugin configured in pyproject.toml, instead of a separate stub set.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy app tests
+        language: system
+        pass_filenames: false
+        files: ^(app|tests)/.*\.py$
+
+      - id: frontend-lint
+        name: frontend eslint + format check
+        entry: bash -c "cd frontend && npm run lint && npm run format:check"
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]

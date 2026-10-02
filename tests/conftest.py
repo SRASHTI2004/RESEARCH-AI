@@ -113,6 +113,7 @@ def _make_admin(email: str) -> None:
     db = _TestingSessionLocal()
     try:
         user = db.query(User).filter(User.email == email).first()
+        assert user is not None
         user.role = "admin"
         db.commit()
     finally:
