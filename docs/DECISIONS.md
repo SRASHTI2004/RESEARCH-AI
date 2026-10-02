@@ -389,3 +389,42 @@ at the bottom of each phase section.
   isolated mirror would need its own duplicate copy of every stub package
   and the pydantic plugin config to agree with `pyproject.toml`, which is
   more to keep in sync than it's worth here.
+
+## Phase 8 — Observability & security hardening
+
+- **Rate limiting via `slowapi`**, keyed by client IP, `memory://` storage
+  by default (fine for a single dev process — `RATE_LIMIT_STORAGE_URI` env
+  var points it at Redis for a real multi-worker deployment, a different
+  DB index than Celery's broker/backend so keys never collide). Applied to
+  `/auth/register` (5/min), `/auth/login` (10/min), `/auth/refresh`
+  (20/min), and `POST /research` (10/min — it's the expensive,
+  pipeline-triggering endpoint). Live-verified: the 6th register attempt
+  in a minute correctly gets 429.
+- **Request-logging middleware is deliberately minimal** — method, path,
+  status, duration only, no bodies or headers. Logging request bodies
+  would mean writing plaintext passwords (`/auth/login`,
+  `/auth/register`) straight into application logs; that's a worse
+  security posture than not having request logging at all.
+- **CORS now rejects a `*` origin at startup**, not just at request time —
+  a wildcard origin combined with `allow_credentials=True` (this app sends
+  Bearer tokens) is already rejected by browsers per the CORS spec, but
+  failing loudly at app startup is a clearer signal than a silently-broken
+  CORS policy discovered later in production.
+- **Found and fixed a real test-isolation bug the new rate limiter
+  caused**: `TestClient` always presents the same fake client address, so
+  without resetting the limiter between tests, auth-endpoint rate limits
+  (exercised by nearly every test via `auth_headers`/`make_user_headers`)
+  got exhausted partway through the suite and every subsequent test saw
+  429s instead of real responses. Fixed with an autouse
+  `limiter.reset()` fixture — the same category of shared-global-state
+  issue as Phase 5's `SessionLocal` patching, different root cause.
+- **Secrets audit**: `git log --all -p` across every commit, searched for
+  known key-prefix patterns (`gsk_`, `AIzaSy`, `sk-`) and generic
+  `password=...`-shaped strings — found nothing. `.env` has never been
+  tracked (confirmed via `git log --all -- .env`, empty). This is expected
+  given Phase 0's git-history reset, but worth actually checking rather
+  than assuming.
+- **Health check, input validation already existed** from earlier phases
+  (Phase 1's `/health`, Pydantic schemas with field constraints
+  throughout) — nothing new needed here beyond confirming they're still
+  in place.

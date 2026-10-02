@@ -36,8 +36,15 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Comma-separated. Dev default is the Vite dev server origin; tighten
-    # for prod via env (Phase 8 covers the rest of the security hardening).
+    # for prod via env.
     cors_origins: str = "http://localhost:5173"
+
+    # --- Rate limiting ---
+    # "memory://" is fine for a single dev process; a multi-worker prod
+    # deployment should point this at the same Redis instance Celery uses
+    # (e.g. "redis://redis:6379/1" — a different DB index, so rate-limit
+    # keys never collide with Celery's).
+    rate_limit_storage_uri: str = "memory://"
 
     database_url: str = "sqlite:///./app.db"
 

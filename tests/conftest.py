@@ -52,6 +52,17 @@ def _reset_db():
 
 
 @pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Rate limits are keyed by client IP, and TestClient always presents
+    the same fake address — without resetting, tests exhaust auth
+    endpoints' limits after a handful of register/login calls and every
+    test after that starts seeing 429s instead of real responses."""
+    from app.core.rate_limit import limiter
+
+    limiter.reset()
+
+
+@pytest.fixture(autouse=True)
 def _use_test_db_for_worker(monkeypatch):
     """The Celery task opens its own DB session (it doesn't go through
     FastAPI's dependency injection), so overriding `get_db` alone isn't
