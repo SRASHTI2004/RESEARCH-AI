@@ -37,6 +37,13 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./app.db"
 
+    # --- Auth ---
+    # Generate a real one with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+    secret_key: str = "dev-secret-change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+
 
 @lru_cache
 def get_settings() -> Settings:

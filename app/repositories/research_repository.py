@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from app.models.research_job import ResearchJob, ResearchSource
 
 
-def create_job(db: Session, company: str) -> ResearchJob:
-    job = ResearchJob(company=company, status="pending")
+def create_job(db: Session, company: str, owner_id: str | None = None) -> ResearchJob:
+    job = ResearchJob(company=company, status="pending", owner_id=owner_id)
     db.add(job)
     db.commit()
     db.refresh(job)
@@ -45,6 +45,10 @@ def get_job(db: Session, job_id: str) -> ResearchJob | None:
     return db.get(ResearchJob, job_id)
 
 
-def list_jobs(db: Session, limit: int = 50) -> list[ResearchJob]:
+def list_jobs(db: Session, limit: int = 50, owner_id: str | None = None) -> list[ResearchJob]:
+    """owner_id=None means "no filter" (admin, sees every job) — callers
+    decide that, this function just applies whatever filter it's given."""
     stmt = select(ResearchJob).order_by(ResearchJob.created_at.desc()).limit(limit)
+    if owner_id is not None:
+        stmt = stmt.where(ResearchJob.owner_id == owner_id)
     return list(db.scalars(stmt))
