@@ -1,19 +1,16 @@
-from langchain_groq import ChatGroq
-from app.config import GROQ_API_KEY, MODEL
+from app.core import llm
+from app.core.llm import LLMError
 
 
 def writer_agent(state: dict) -> dict:
-    llm = ChatGroq(
-        model=MODEL,
-        api_key=GROQ_API_KEY,
-        temperature=0.4
-    )
+    if state.get("status") == "failed":
+        return state
 
     topic = state["topic"]
     research = state["research"]
     analysis = state["analysis"]
 
-    prompt = f"""You are a professional writer agent. Write a 
+    prompt = f"""You are a professional writer agent. Write a
 comprehensive, well-structured report.
 
 Topic: {topic}
@@ -30,10 +27,13 @@ Write a professional report with:
 
 Make it clear, professional and actionable."""
 
-    response = llm.invoke(prompt)
+    try:
+        content = llm.invoke_llm(prompt, temperature=0.4, stage="writer")
+    except LLMError as exc:
+        return {**state, "status": "failed", "error": f"Writer stage failed: {exc}"}
 
     return {
         **state,
-        "report": response.content,
-        "status": "writing_done"
+        "report": content,
+        "status": "writing",
     }
