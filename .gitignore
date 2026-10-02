@@ -16,10 +16,12 @@ venv/
 htmlcov/
 .coverage
 
-# node / frontend (added in later phases)
+# node / frontend
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
+coverage/
 
 # db / local state
 *.db

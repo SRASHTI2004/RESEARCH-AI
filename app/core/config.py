@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "INFO"
 
+    # Comma-separated. Dev default is the Vite dev server origin; tighten
+    # for prod via env (Phase 8 covers the rest of the security hardening).
+    cors_origins: str = "http://localhost:5173"
+
     database_url: str = "sqlite:///./app.db"
 
     # --- Auth ---

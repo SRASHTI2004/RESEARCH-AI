@@ -264,3 +264,63 @@ at the bottom of each phase section.
   inside the Linux container from `docker-compose` (Phase 7) — documented
   as a Windows-specific caveat in the README, not something worked around
   in code.
+
+## Phase 6 — React + TypeScript frontend
+
+- **Hand-scaffolded, not `npm create vite`:** this machine's Node is
+  20.11.0; the current `create-vite` and several latest-major packages
+  (vite 8, vitest 5, jsdom 30, `@testing-library/jest-dom` 7) all require
+  Node ≥20.19/22+ and failed outright. Rather than requiring a Node
+  upgrade, every package was pinned to the newest version that still
+  supports Node 20.11 (vite 6.4.3, vitest 3.2.7, jsdom 26, jest-dom 6.6.3,
+  etc. — checked individually via `npm view <pkg> engines` before
+  pinning). React 19, react-router 7, and TanStack Query 5 all install and
+  run fine regardless (no Node-version gate on the runtime libraries, only
+  on the build/test tooling).
+- **One known, accepted dev-only vulnerability:** `npm audit` flags
+  `@vitest/mocker` (moderate, path-traversal in the test runner's mocking
+  layer) — fixing it requires Vitest 5, which needs Node 22+. It's a
+  dev-dependency that never ships in the production build; documented
+  here rather than silently ignored. Re-run `npm audit` after any future
+  Node upgrade.
+- **`POST /research` now returns 202, not 200/201** on the frontend's
+  "create brief" call — the UI always navigates to `/briefs/:id` and polls
+  from there, the same whether the job is still `pending` (real worker) or
+  already `done`/`failed` (eager-mode dev fallback). No separate code path
+  for the two cases.
+- **Polling via `refetchInterval`, not a WebSocket/SSE push channel.**
+  TanStack Query's `refetchInterval` callback stops polling once
+  `status` is `done`/`failed`. Simpler and sufficient at this scale; a
+  WebSocket would be the next step for true push updates, noted as a
+  "what I'd add next".
+- **TS types for API responses are hand-written** (`src/api/types.ts`),
+  not generated from the FastAPI OpenAPI schema. For a project this size
+  the duplication is small and explicit; `openapi-typescript` codegen
+  would be the natural upgrade if the schema grew or drifted often enough
+  to cause bugs.
+- **jsPDF is dynamically imported** inside the export handler, not a
+  top-level import — it (plus its `html2canvas`/`dompurify` dependencies)
+  added ~230KB gzipped to the *main* bundle in an initial build; splitting
+  it into its own chunk means that cost is only paid by someone who
+  actually clicks "Export PDF".
+- **`dashboard.py` (Streamlit) is retired**, not kept alongside the React
+  app — maintaining two frontends against the same (now async + auth'd)
+  API wasn't worth it once React existed; `streamlit` dropped from
+  `requirements.txt`.
+- **CORS wired now, out of Phase 8's order**, because the frontend
+  literally cannot call the API cross-origin without it — `CORS_ORIGINS`
+  env var (default `http://localhost:5173`, the Vite dev server). Full
+  security hardening (rate limiting, stricter prod origin policy) is still
+  Phase 8.
+- **No browser-automation visual check** — no browser-automation tool
+  was set up, so the UI wasn't clicked through in an
+  actual browser. What *was* verified: `tsc -b` (clean), `vite build`
+  (clean, reasonable bundle sizes after the jsPDF split), `vitest run`
+  (13/13 passing, including the trickiest logic — the 401-refresh-retry
+  flow in the API client), the Vite dev server booting and serving
+  `index.html`, and a live CORS preflight + register/login/`/auth/me`
+  round-trip against the real running backend with the frontend's exact
+  origin header. The data contracts (TS types vs. Pydantic schemas) match
+  by inspection. A manual click-through is still owed
+  (register → new brief → watch it progress → history) before considering
+  this phase fully done.
