@@ -1,28 +1,34 @@
 from app.core import llm
 from app.core.llm import LLMError
+from app.pipeline.sourcing import format_source_list
 
 
 def analyzer_agent(state: dict) -> dict:
     if state.get("status") == "failed":
         return state
 
+    company = state["company"]
     research = state["research"]
-    topic = state["topic"]
+    sources = state["sources"]
 
-    prompt = f"""You are an analysis agent. Analyze the research
-provided and extract key insights.
+    prompt = f"""You are an analysis agent preparing a company research brief.
 
-Topic: {topic}
-Research: {research}
+Company: {company}
+Available sources: {format_source_list(sources)}
 
-Provide:
-1. Top 5 key insights
-2. Main patterns and trends
-3. Critical findings
-4. Gaps or limitations in the research
-5. Recommendations for further exploration
+Sourced research notes:
+{research}
 
-Be analytical and precise."""
+Organize this into four clearly-labeled sections, preserving every [n]
+citation from the research notes exactly as given (don't invent new ones):
+1. Company Overview
+2. Recent News
+3. Tech Stack
+4. Interview Prep Questions (plausible questions a candidate should expect,
+   grounded in what the sources actually say about the company)
+
+If a section has little or no source support, say so explicitly rather
+than filling it with speculation."""
 
     try:
         content = llm.invoke_llm(prompt, temperature=0.2, stage="analyzer")

@@ -14,14 +14,23 @@ class Settings(BaseSettings):
     gemini_writer_model: str = "gemini-2.0-flash"
 
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
-    groq_writer_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-20b"
+    groq_writer_model: str = "openai/gpt-oss-120b"
 
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1"
 
     llm_timeout_seconds: float = 30.0
     llm_max_retries: int = 3
+
+    # --- Web search (Researcher stage sourcing) ---
+    # Kept small so the synthesis prompt fits inside Groq's free-tier TPM
+    # limit (8000 tokens/min) even with no Gemini key configured. Raise
+    # these if you have a paid tier or Gemini configured as primary.
+    search_provider: str = "duckduckgo"
+    search_results_per_query: int = 2
+    search_fetch_timeout_seconds: float = 10.0
+    search_max_content_chars: int = 1200
 
     environment: str = "development"
     log_level: str = "INFO"

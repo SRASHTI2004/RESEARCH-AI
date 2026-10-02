@@ -63,6 +63,18 @@ def test_no_configured_providers_raises_clear_error(monkeypatch):
         invoke_llm("hello")
 
 
+def test_empty_response_is_treated_as_failure_and_falls_back(monkeypatch):
+    """A provider returning HTTP-200-but-blank content must not produce an empty report."""
+    blank = _StubProvider("primary", lambda n: "   ")
+    working = _StubProvider("secondary", lambda n: "real content")
+
+    monkeypatch.setattr("app.core.llm.factory._ordered_providers", lambda: [blank, working])
+
+    result = invoke_llm("hello")
+    assert result == "real content"
+    assert blank.calls == 2  # exhausted its retry budget on empty responses
+
+
 def test_recovers_within_retry_budget_without_falling_back(monkeypatch):
     flaky = _StubProvider("primary", lambda n: ConnectionError("transient") if n < 2 else "ok")
 

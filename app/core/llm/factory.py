@@ -13,6 +13,16 @@ class LLMError(Exception):
     """Raised when every configured provider has failed (or none are configured)."""
 
 
+class EmptyLLMResponseError(Exception):
+    """Raised when a provider returns HTTP 200 but a blank/whitespace-only response.
+
+    Seen in practice with Groq's reasoning models (e.g. openai/gpt-oss-120b)
+    on long prompts — the call succeeds but content comes back empty. This
+    makes that count as a retryable failure instead of silently producing
+    an empty report.
+    """
+
+
 def _ordered_providers() -> list[LLMProvider]:
     names = [p.strip() for p in settings.llm_provider_order.split(",") if p.strip()]
     providers = []
@@ -33,7 +43,10 @@ def _call_with_retries(provider: LLMProvider, prompt: str, temperature: float, s
         reraise=True,
     )
     def _attempt() -> str:
-        return provider.invoke(prompt, temperature=temperature, stage=stage)
+        content = provider.invoke(prompt, temperature=temperature, stage=stage)
+        if not content or not content.strip():
+            raise EmptyLLMResponseError(f"Provider '{provider.name}' returned an empty response")
+        return content
 
     return _attempt()
 

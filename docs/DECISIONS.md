@@ -74,3 +74,63 @@ at the bottom of each phase section.
 - **Dev dependencies split out** into `requirements-dev.txt` (pytest,
   pytest-mock, httpx) layered on top of `requirements.txt` — this is the
   standard split so production images don't install test tooling.
+
+## Phase 2 — Pivot to Company Research Brief
+
+- **Search library:** `duckduckgo-search` is deprecated upstream in favor of
+  `ddgs` (same author, same `DDGS` class/API) — used `ddgs` directly rather
+  than the deprecated package. Confirmed live: it searches across DuckDuckGo
+  plus several other backends (Brave, Mojeek, Yahoo, Startpage, Google) and
+  falls back automatically when one is rate-limited (observed live: Brave
+  and Google both returned 429 for some queries and it transparently used
+  another backend).
+- **Content extraction:** `trafilatura.fetch_url()` returned nothing against
+  at least one real site (likely a default-UA/TLS
+  quirk); switched to fetching with `requests` (custom User-Agent, explicit
+  timeout) and passing the HTML string into `trafilatura.extract()`
+  separately — more robust and keeps fetch timeout under our own control.
+  `fetch_page_text()` never raises; a failed fetch falls back to the
+  search-result snippet rather than dropping the source.
+- **Groq's model catalog had moved on:** `llama-3.3-70b-versatile`
+  (the original hardcoded model) now 404s — Groq's currently-available free
+  models are OpenAI's open-weight `gpt-oss` family. Defaults updated to
+  `openai/gpt-oss-20b` (default/fast stages) and `openai/gpt-oss-120b`
+  (Writer stage override). **Lesson:** free-tier model catalogs change
+  under you; this is exactly why the model name is an env var, not a
+  hardcoded string.
+- **Known limitation — Groq free tier is tight for a 4-stage pipeline:**
+  Groq's free tier caps at 8000 tokens/minute, and each stage's prompt
+  includes the previous stages' full output, so cumulative usage across
+  Researcher → Analyzer → Writer → Reviewer can exceed that within the same
+  rolling minute for content-rich companies — confirmed live (3/4 stages
+  succeeded with real content before the Reviewer stage hit the cap). The
+  fallback/retry logic handled it exactly as designed (backoff, then a
+  clear "rate limited" error) — but with only Groq configured there's no
+  second provider to fall back *to*. **Recommendation documented in
+  README:** add a free Gemini API key (`GEMINI_API_KEY`) as the primary
+  provider — its free tier is substantially more generous — and Groq
+  becomes a true fallback rather than the only option. Default
+  `search_results_per_query` (2) and `search_max_content_chars` (1200) were
+  also trimmed from initial values (3 / 4000) specifically to reduce the
+  chance of hitting this on Groq-only setups.
+- **Real bug found via live smoke test, not mocks:** Groq's `gpt-oss-120b`
+  returned HTTP 200 with a genuinely empty content string on one real call
+  under load (reasoning tokens likely consumed the completion budget before
+  any final-answer tokens were emitted). Mocked tests couldn't have caught
+  this — they mock at the `invoke_llm` boundary. Fixed by treating an
+  empty/whitespace response as a retryable failure
+  (`EmptyLLMResponseError`) inside `_call_with_retries`, so it now retries
+  and ultimately falls back to the next provider instead of silently
+  producing an empty report. Covered by
+  `test_empty_response_is_treated_as_failure_and_falls_back`.
+- **Reviewer's "fact-check" is an LLM self-review, not a real verifier:**
+  it re-reads the draft against the source list and is instructed to flag
+  claims whose citation number doesn't exist — this catches citation
+  bookkeeping errors (wrong/missing [n]) but does NOT verify that the cited
+  source *actually supports* the claim's content (that would need per-claim
+  NLI/entailment checking against source text, out of scope here). This
+  is called out explicitly as a limitation in the README.
+- **Tavily was not implemented** (only the `SearchProvider` interface
+  exists for it) — DuckDuckGo/`ddgs` fully satisfies the free, no-key
+  requirement, and adding Tavily later is a single new file in
+  `app/core/search/` plus a registry entry.

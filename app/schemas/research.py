@@ -4,22 +4,30 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class ResearchRequest(BaseModel):
-    topic: str = Field(..., min_length=1, max_length=200)
+    company: str = Field(..., min_length=1, max_length=200)
 
-    @field_validator("topic")
+    @field_validator("company")
     @classmethod
-    def topic_must_not_be_blank(cls, value: str) -> str:
+    def company_must_not_be_blank(cls, value: str) -> str:
         value = value.strip()
         if not value:
-            raise ValueError("topic cannot be blank")
+            raise ValueError("company cannot be blank")
         return value
 
 
+class Source(BaseModel):
+    index: int
+    title: str
+    url: str
+    snippet: str
+
+
 class ResearchResponse(BaseModel):
-    topic: str
+    company: str
     research: str
     analysis: str
     report: str
     final_report: str
+    sources: list[Source]
     status: str
     error: Optional[str] = None

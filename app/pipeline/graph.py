@@ -9,11 +9,12 @@ from app.pipeline.agents.writer import writer_agent
 
 
 class AgentState(TypedDict):
-    topic: str
+    company: str
     research: str
     analysis: str
     report: str
     final_report: str
+    sources: list[dict]
     status: str
     error: Optional[str]
 
@@ -41,15 +42,16 @@ def create_graph():
     return workflow.compile()
 
 
-def run_research(topic: str) -> AgentState:
+def run_research(company: str) -> AgentState:
     graph = create_graph()
 
     initial_state: AgentState = {
-        "topic": topic,
+        "company": company,
         "research": "",
         "analysis": "",
         "report": "",
         "final_report": "",
+        "sources": [],
         "status": "starting",
         "error": None,
     }

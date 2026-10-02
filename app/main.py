@@ -6,9 +6,11 @@ from app.core.logging import configure_logging
 configure_logging()
 
 app = FastAPI(
-    title="ResearchAI — Multi Agent System",
-    description="4 AI agents collaborate to research any topic",
-    version="1.0.0",
+    title="ResearchAI — Company Research Brief",
+    description="Multi-agent pipeline that researches a company via live web search "
+    "and produces a sourced, cited brief: overview, recent news, tech stack, "
+    "and interview prep questions.",
+    version="2.0.0",
 )
 
 app.include_router(health.router)
