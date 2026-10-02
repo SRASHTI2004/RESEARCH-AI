@@ -9,6 +9,8 @@ def test_research_happy_path(client):
     assert data["company"] == "Acme Corp"
     assert data["status"] == "done"
     assert data["error"] is None
+    assert data["id"]
+    assert data["created_at"]
     for field in ("research", "analysis", "report", "final_report"):
         assert "MOCKED" in data[field]
 
@@ -60,3 +62,45 @@ def test_research_failure_short_circuits_remaining_stages(monkeypatch):
     assert result["analysis"] == ""
     assert result["report"] == ""
     assert result["final_report"] == ""
+
+
+def test_get_research_by_id_returns_persisted_job(client):
+    created = client.post("/research", json={"company": "Acme Corp"}).json()
+
+    res = client.get(f"/research/{created['id']}")
+    assert res.status_code == 200
+    assert res.json()["company"] == "Acme Corp"
+
+
+def test_get_research_unknown_id_returns_404(client):
+    res = client.get("/research/does-not-exist")
+    assert res.status_code == 404
+
+
+def test_failed_job_is_persisted_and_retrievable(client, monkeypatch):
+    """A 502 response to the client must not mean the job vanished — it's
+    saved with status=failed so it shows up in history."""
+
+    def _boom(prompt, *, temperature=0.3, stage="default"):
+        raise LLMError("down")
+
+    monkeypatch.setattr("app.core.llm.invoke_llm", _boom)
+
+    create_res = client.post("/research", json={"company": "Acme Corp"})
+    assert create_res.status_code == 502
+
+    jobs = client.get("/research").json()
+    assert len(jobs) == 1
+    assert jobs[0]["status"] == "failed"
+
+    job = client.get(f"/research/{jobs[0]['id']}").json()
+    assert job["status"] == "failed"
+    assert job["error"]
+
+
+def test_list_research_orders_newest_first(client):
+    client.post("/research", json={"company": "Acme Corp"})
+    client.post("/research", json={"company": "Beta Inc"})
+
+    jobs = client.get("/research").json()
+    assert [j["company"] for j in jobs] == ["Beta Inc", "Acme Corp"]

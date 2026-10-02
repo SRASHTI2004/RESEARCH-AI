@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ResearchRequest(BaseModel):
@@ -16,6 +17,8 @@ class ResearchRequest(BaseModel):
 
 
 class Source(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     index: int
     title: str
     url: str
@@ -23,6 +26,9 @@ class Source(BaseModel):
 
 
 class ResearchResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
     company: str
     research: str
     analysis: str
@@ -31,3 +37,14 @@ class ResearchResponse(BaseModel):
     sources: list[Source]
     status: str
     error: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ResearchSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    company: str
+    status: str
+    created_at: datetime

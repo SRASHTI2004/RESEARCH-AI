@@ -1,7 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app.core.db import get_db
 from app.main import app
+from app.models import Base
 
 FAKE_SOURCES = [
     {
@@ -19,6 +24,29 @@ FAKE_SOURCES = [
         "content": "Acme Corp raised a $50M Series B round in 2024.",
     },
 ]
+
+# In-memory SQLite shared across connections (StaticPool) so the same DB is
+# visible both to the test and to the app's request-scoped sessions.
+_engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+_TestingSessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
+
+
+def _override_get_db():
+    db = _TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = _override_get_db
+
+
+@pytest.fixture(autouse=True)
+def _reset_db():
+    Base.metadata.create_all(bind=_engine)
+    yield
+    Base.metadata.drop_all(bind=_engine)
 
 
 @pytest.fixture

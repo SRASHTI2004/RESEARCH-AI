@@ -12,3 +12,6 @@ streamlit==1.41.1
 requests==2.32.3
 ddgs==9.16.0
 trafilatura==2.2.0
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg2-binary==2.9.10
