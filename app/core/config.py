@@ -46,6 +46,16 @@ class Settings(BaseSettings):
     # keys never collide with Celery's).
     rate_limit_storage_uri: str = "memory://"
 
+    # --- Object storage (optional) ---
+    # Unset by default — gracefully skipped (no export upload, no error)
+    # when any of these are blank, same pattern as an unconfigured LLM
+    # provider. MinIO locally (docker-compose), any S3-compatible service
+    # (including real AWS S3) in production by just changing these.
+    storage_endpoint_url: str = ""
+    storage_access_key: str = ""
+    storage_secret_key: str = ""
+    storage_bucket_name: str = "researchai-reports"
+
     database_url: str = "sqlite:///./app.db"
 
     # --- Auth ---

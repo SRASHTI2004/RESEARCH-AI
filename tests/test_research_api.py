@@ -143,3 +143,44 @@ def test_admin_sees_every_users_job(client, make_user_headers):
     jobs = client.get("/research", headers=admin).json()
     assert len(jobs) == 1
     assert jobs[0]["company"] == "Acme Corp"
+
+
+def test_export_returns_404_when_storage_not_configured(client, auth_headers):
+    """Default test/dev config has no storage credentials — export is
+    simply unavailable, not an error."""
+    job = client.post("/research", json={"company": "Acme Corp"}, headers=auth_headers).json()
+    assert job["has_export"] is False
+
+    res = client.get(f"/research/{job['id']}/export", headers=auth_headers)
+    assert res.status_code == 404
+
+
+def test_export_returns_presigned_url_when_available(client, auth_headers, monkeypatch):
+    monkeypatch.setattr(
+        "app.worker.tasks.storage.upload_report", lambda job_id, content: f"reports/{job_id}.md"
+    )
+    monkeypatch.setattr(
+        "app.api.routers.research.storage.get_download_url",
+        lambda key, **kw: f"https://storage.example.com/{key}?signed=1",
+    )
+
+    job = client.post("/research", json={"company": "Acme Corp"}, headers=auth_headers).json()
+    assert job["has_export"] is True
+
+    res = client.get(f"/research/{job['id']}/export", headers=auth_headers)
+    assert res.status_code == 200
+    assert res.json()["url"] == f"https://storage.example.com/reports/{job['id']}.md?signed=1"
+
+
+def test_export_not_visible_to_another_user(client, make_user_headers, monkeypatch):
+    monkeypatch.setattr(
+        "app.worker.tasks.storage.upload_report", lambda job_id, content: f"reports/{job_id}.md"
+    )
+
+    alice = make_user_headers("alice3@example.com")
+    bob = make_user_headers("bob3@example.com")
+
+    job = client.post("/research", json={"company": "Acme Corp"}, headers=alice).json()
+
+    res = client.get(f"/research/{job['id']}/export", headers=bob)
+    assert res.status_code == 404

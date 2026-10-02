@@ -124,4 +124,6 @@ export const api = {
   getResearch: (id: string) => request<ResearchJob>(`/research/${id}`),
 
   listResearch: () => request<ResearchSummary[]>("/research"),
+
+  getExportUrl: (id: string) => request<{ url: string }>(`/research/${id}/export`),
 };

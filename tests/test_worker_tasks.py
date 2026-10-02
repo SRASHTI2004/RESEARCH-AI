@@ -43,3 +43,51 @@ def test_run_research_job_persists_status_after_each_stage(db_session, monkeypat
 def test_run_research_job_skips_silently_if_job_missing(db_session):
     """No job row (e.g. deleted mid-flight) must not raise — just a no-op."""
     run_research_job.run("does-not-exist", "Acme Corp")  # must not raise
+
+
+def test_run_research_job_uploads_export_when_storage_configured(db_session, monkeypatch):
+    monkeypatch.setattr("app.core.llm.invoke_llm", lambda prompt, **kw: f"MOCKED[{kw.get('stage')}]")
+    monkeypatch.setattr(
+        "app.pipeline.agents.researcher.gather_sources",
+        lambda company, **kw: [
+            {"index": 1, "title": "T", "url": "https://u", "snippet": "s", "content": "c"}
+        ],
+    )
+    monkeypatch.setattr(
+        "app.worker.tasks.storage.upload_report", lambda job_id, content: f"reports/{job_id}.md"
+    )
+
+    job = repo.create_job(db_session, "Acme Corp")
+    run_research_job.run(job.id, "Acme Corp")
+
+    db_session.rollback()
+    final = repo.get_job(db_session, job.id)
+    assert final is not None
+    assert final.export_object_key == f"reports/{job.id}.md"
+    assert final.has_export is True
+
+
+def test_run_research_job_tolerates_upload_failure(db_session, monkeypatch):
+    """A broken object-storage upload must never take down an otherwise
+    successful job."""
+    monkeypatch.setattr("app.core.llm.invoke_llm", lambda prompt, **kw: f"MOCKED[{kw.get('stage')}]")
+    monkeypatch.setattr(
+        "app.pipeline.agents.researcher.gather_sources",
+        lambda company, **kw: [
+            {"index": 1, "title": "T", "url": "https://u", "snippet": "s", "content": "c"}
+        ],
+    )
+
+    def _boom(job_id, content):
+        raise RuntimeError("storage is down")
+
+    monkeypatch.setattr("app.worker.tasks.storage.upload_report", _boom)
+
+    job = repo.create_job(db_session, "Acme Corp")
+    run_research_job.run(job.id, "Acme Corp")  # must not raise
+
+    db_session.rollback()
+    final = repo.get_job(db_session, job.id)
+    assert final is not None
+    assert final.status == "done"
+    assert final.export_object_key is None

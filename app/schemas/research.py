@@ -36,6 +36,7 @@ class ResearchResponse(BaseModel):
     sources: list[Source]
     status: str
     error: str | None = None
+    has_export: bool = False
     created_at: datetime
     updated_at: datetime
 

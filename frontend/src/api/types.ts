@@ -20,6 +20,7 @@ export interface ResearchJob {
   sources: Source[];
   status: JobStatus;
   error: string | null;
+  has_export: boolean;
   created_at: string;
   updated_at: string;
 }

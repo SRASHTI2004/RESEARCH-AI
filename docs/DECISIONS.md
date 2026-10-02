@@ -428,3 +428,39 @@ at the bottom of each phase section.
   (Phase 1's `/health`, Pydantic schemas with field constraints
   throughout) — nothing new needed here beyond confirming they're still
   in place.
+
+## Phase 9 (optional) — Object storage
+
+- **`boto3`, not the `minio` SDK** — boto3 is the standard AWS S3 client;
+  since MinIO is fully S3-API-compatible, the exact same code works against
+  real AWS S3 in production by changing only the endpoint URL and
+  credentials. Stronger, more transferable skill to demonstrate than a
+  MinIO-specific client.
+- **Graceful degradation, same pattern as the LLM provider chain and
+  Celery's eager mode**: blank storage credentials (the default) mean
+  `is_configured()` is false and every `storage.*` call is a no-op
+  returning `None` — never an exception. A completed research job is
+  never blocked or failed by object storage being absent or unreachable;
+  the export upload happens *after* the job is already marked `done`, in
+  a `try/except` that only logs on failure. Covered by
+  `test_run_research_job_tolerates_upload_failure`.
+- **Client-side export (Phase 6) still works regardless** — Markdown/PDF
+  generation happens entirely in the browser from data already in the API
+  response. The object-storage export is a *second*, independent path
+  ("the server also kept a copy"), not a replacement.
+- **`GET /research/{id}/export` returns a short-lived presigned URL**
+  (1 hour), not the file itself — the API process never proxies the
+  download; the browser fetches directly from MinIO/S3. 404 (not an
+  empty/null field) when no export exists, consistent with the project's
+  existing "don't confirm things that aren't there" pattern from Phase 4's
+  ownership checks.
+- **Bucket creation is idempotent and lazy** (`head_bucket` then
+  `create_bucket` only on 404) — happens on first upload, not at app
+  startup, so a dev who never configures storage never triggers an
+  unnecessary MinIO connection attempt at all.
+- **Not live-verified** (no Docker/MinIO run yet, same
+  limitation as Phase 7) — fully covered by mocked unit tests
+  (`tests/test_storage.py`, plus the worker-task integration tests) that
+  exercise the real `boto3` exception types (`ClientError`) against a fake
+  client, not just stubbed-out success paths. Still to do: confirm a
+  real upload/download round-trip after `docker compose up`.

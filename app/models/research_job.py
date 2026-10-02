@@ -35,11 +35,19 @@ class ResearchJob(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
+    # Object storage key for the uploaded report (Phase 9) — None if
+    # storage isn't configured/reachable, or the job hasn't finished yet.
+    export_object_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     sources: Mapped[list["ResearchSource"]] = relationship(
         back_populates="job",
         cascade="all, delete-orphan",
         order_by="ResearchSource.index",
     )
+
+    @property
+    def has_export(self) -> bool:
+        return self.export_object_key is not None
 
 
 class ResearchSource(Base):

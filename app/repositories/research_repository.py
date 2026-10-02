@@ -41,6 +41,14 @@ def save_result(db: Session, job: ResearchJob, result: dict) -> ResearchJob:
     return job
 
 
+def set_export_key(db: Session, job: ResearchJob, object_key: str) -> ResearchJob:
+    job.export_object_key = object_key
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return job
+
+
 def get_job(db: Session, job_id: str) -> ResearchJob | None:
     return db.get(ResearchJob, job_id)
 
