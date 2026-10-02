@@ -5,23 +5,24 @@ from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.models.user import User
 from app.schemas.research import ResearchRequest, ResearchResponse, ResearchSummary
-from app.services.research_service import run_research
+from app.services.research_service import enqueue_research
 from app.repositories import research_repository as repo
 
 router = APIRouter(prefix="/research", tags=["research"])
 
 
-@router.post("", response_model=ResearchResponse, status_code=201)
+@router.post("", response_model=ResearchResponse, status_code=202)
 def create_research(
     request: ResearchRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ResearchResponse:
-    job = run_research(db, request.company, current_user.id)
-
-    if job.status == "failed":
-        raise HTTPException(status_code=502, detail=job.error or "Research pipeline failed")
-
+    """Accepts the job and returns immediately — poll GET /research/{id}
+    for progress (status moves researching -> analyzing -> writing -> done,
+    or failed with an error message). Under the eager-mode dev fallback the
+    job may already be finished by the time this responds; that's still a
+    valid 202 "accepted" response, just a fast one."""
+    job = enqueue_research(db, request.company, current_user.id)
     return ResearchResponse.model_validate(job)
 
 

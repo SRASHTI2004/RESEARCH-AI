@@ -216,3 +216,51 @@ at the bottom of each phase section.
   (`fk_research_jobs_owner_id_users`); verified live that `alembic
   downgrade -1` then `alembic upgrade head` both succeed cleanly. This is a
   common Alembic/SQLite gotcha worth knowing, not a one-off bug.
+
+## Phase 5 — Async processing & per-stage progress
+
+- **Celery eager mode as the no-Redis fallback**, not a hand-rolled
+  "pretend async" shim: `CELERY_TASK_ALWAYS_EAGER=true` (default here) runs
+  `.delay()` synchronously in-process — the same task code path a real
+  Redis-backed worker runs, just not actually backgrounded. `docker-compose`
+  sets it `false` and runs a real `celery worker` process; nothing in
+  `app/worker/tasks.py` changes between the two modes.
+- **`graph.stream()`, not `graph.invoke()`, is what makes per-stage
+  progress possible.** LangGraph's default stream mode yields
+  `{node_name: output}` after *every* node completes (confirmed against
+  the installed langgraph 0.2.62 with a throwaway test graph before
+  wiring this in) — the task persists the job row after each yielded
+  update, so status moves researching → analyzing → writing → done (or
+  failed) as it actually happens, not all at once at the end.
+- **API contract change: `POST /research` now always returns 202**, never
+  502 — it's an async job-creation endpoint now, so success/failure of the
+  pipeline itself is conveyed through the `status`/`error` fields in the
+  response body (and via polling `GET /research/{id}`), not the HTTP
+  status code. Under eager mode the body may already show `status=done` or
+  `failed` by the time the 202 arrives (the task already ran
+  synchronously) — that's expected and documented, not a bug; a
+  Redis-backed worker would return `status=pending` immediately instead.
+- **A real bug caught before it shipped:** the Celery task opens its own
+  DB session (`SessionLocal()`) independent of FastAPI's
+  `Depends(get_db)` — overriding `get_db` for tests (as Phase 3 already
+  did) silently does NOT redirect the task's session. First test run
+  showed every job stuck at `status="pending"` because the task was
+  writing to a different test still passed by writing to the real
+  `app.db` file instead of the in-memory test DB. Fixed with an autouse
+  fixture patching `app.worker.tasks.SessionLocal` directly (same
+  module-attribute-patching pattern used for mocking the LLM/search
+  calls). A second, related issue: a test reading progress through a
+  long-lived `db_session` fixture while the task's own session writes to
+  the *same* StaticPool-shared SQLite connection needs
+  `db_session.rollback()` before each read, or it sees a stale snapshot
+  from its own still-open transaction instead of the task's latest
+  commits — this is a StaticPool/SQLite-testing-specific gotcha, not a
+  general multi-session issue (Postgres session isolation behaves
+  differently).
+- **Celery + native Windows worker processes don't mix well** (Celery's
+  default prefork pool needs `os.fork()`, which Windows lacks). Not a
+  blocker here since eager mode never starts a worker process at all; the
+  real `celery -A app.worker.celery_app worker` command is meant to run
+  inside the Linux container from `docker-compose` (Phase 7) — documented
+  as a Windows-specific caveat in the README, not something worked around
+  in code.

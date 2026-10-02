@@ -51,9 +51,30 @@ def _reset_db():
     Base.metadata.drop_all(bind=_engine)
 
 
+@pytest.fixture(autouse=True)
+def _use_test_db_for_worker(monkeypatch):
+    """The Celery task opens its own DB session (it doesn't go through
+    FastAPI's dependency injection), so overriding `get_db` alone isn't
+    enough — without this, the eager-mode task would write to the real
+    app.db file instead of this test's in-memory DB, and every
+    research-job test would see status stuck at "pending" forever."""
+    monkeypatch.setattr("app.worker.tasks.SessionLocal", _TestingSessionLocal)
+
+
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
+
+
+@pytest.fixture
+def db_session():
+    """Direct session onto the same in-memory test DB — for tests that
+    exercise repositories/worker tasks without going through the API."""
+    db = _TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @pytest.fixture(autouse=True)

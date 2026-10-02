@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # --- Async job processing ---
+    # Eager mode (the default: no Redis needed) runs tasks
+    # synchronously in-process via .delay() — no broker needed. Set False
+    # (docker-compose does) for a real background worker process.
+    celery_broker_url: str = "redis://localhost:6379/0"
+    celery_result_backend: str = "redis://localhost:6379/0"
+    celery_task_always_eager: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

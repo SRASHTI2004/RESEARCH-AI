@@ -8,10 +8,13 @@ def test_research_requires_auth(client):
 
 def test_research_happy_path(client, auth_headers):
     res = client.post("/research", json={"company": "Acme Corp"}, headers=auth_headers)
-    assert res.status_code == 201
+    assert res.status_code == 202
 
     data = res.json()
     assert data["company"] == "Acme Corp"
+    # Under eager-mode Celery (no Redis here) the task has already run
+    # synchronously by the time this 202 response is built, so status is
+    # already final — see app/services/research_service.py.
     assert data["status"] == "done"
     assert data["error"] is None
     assert data["id"]
@@ -34,23 +37,28 @@ def test_research_missing_company_rejected(client, auth_headers):
     assert res.status_code == 422
 
 
-def test_research_no_sources_found_returns_502(client, auth_headers, monkeypatch):
+def test_research_no_sources_found_is_reported_via_status_field(client, auth_headers, monkeypatch):
     monkeypatch.setattr("app.pipeline.agents.researcher.gather_sources", lambda company, **kw: [])
 
     res = client.post("/research", json={"company": "Acme Corp"}, headers=auth_headers)
-    assert res.status_code == 502
-    assert "No web sources" in res.json()["detail"]
+    # Still 202 — it's an async job API now. The outcome lives in the body.
+    assert res.status_code == 202
+    data = res.json()
+    assert data["status"] == "failed"
+    assert "No web sources" in data["error"]
 
 
-def test_research_llm_failure_returns_502(client, auth_headers, monkeypatch):
+def test_research_llm_failure_is_reported_via_status_field(client, auth_headers, monkeypatch):
     def _boom(prompt, *, temperature=0.3, stage="default"):
         raise LLMError("all providers exhausted")
 
     monkeypatch.setattr("app.core.llm.invoke_llm", _boom)
 
     res = client.post("/research", json={"company": "Acme Corp"}, headers=auth_headers)
-    assert res.status_code == 502
-    assert "all providers exhausted" in res.json()["detail"]
+    assert res.status_code == 202
+    data = res.json()
+    assert data["status"] == "failed"
+    assert "all providers exhausted" in data["error"]
 
 
 def test_research_failure_short_circuits_remaining_stages(monkeypatch):
@@ -83,8 +91,8 @@ def test_get_research_unknown_id_returns_404(client, auth_headers):
 
 
 def test_failed_job_is_persisted_and_retrievable(client, auth_headers, monkeypatch):
-    """A 502 response to the client must not mean the job vanished — it's
-    saved with status=failed so it shows up in history."""
+    """A failed job must not vanish — it's saved with status=failed so it
+    shows up in history, same as a successful one."""
 
     def _boom(prompt, *, temperature=0.3, stage="default"):
         raise LLMError("down")
@@ -92,7 +100,8 @@ def test_failed_job_is_persisted_and_retrievable(client, auth_headers, monkeypat
     monkeypatch.setattr("app.core.llm.invoke_llm", _boom)
 
     create_res = client.post("/research", json={"company": "Acme Corp"}, headers=auth_headers)
-    assert create_res.status_code == 502
+    assert create_res.status_code == 202
+    assert create_res.json()["status"] == "failed"
 
     jobs = client.get("/research", headers=auth_headers).json()
     assert len(jobs) == 1
