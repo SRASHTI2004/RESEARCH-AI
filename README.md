@@ -11,6 +11,8 @@ It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a m
 See [`docs/DECISIONS.md`](docs/DECISIONS.md) for the phase-by-phase engineering log,
 
 
+![Jobs list: daily matches scored against your profile](docs/screenshots/jobs.png)
+
 ## What it does
 
 | Feature | Where | How |
@@ -95,6 +97,7 @@ worker, MinIO) is still there for anyone who has Docker.
 | Notifications | Telegram Bot API, `smtplib` (Gmail App Password) | free; secrets redacted from logs |
 | Documents | `fpdf2` (PDF), `python-docx` (DOCX) | ATS-friendly single-column resumes |
 | Frontend | React 19 + TypeScript, Vite, TanStack Query, React Router, React Hook Form + Zod | typed end to end |
+| UI | Tailwind CSS v4, shadcn/ui-style components (Radix primitives, CVA), lucide icons, Sonner toasts, `react-markdown` + GFM | one token-based design system; light/dark/system themes; LLM output rendered as Markdown with clickable citation chips |
 | Quality | ruff, mypy, ESLint, Prettier, pytest, Vitest, forbidden-files check | in CI and pre-commit |
 
 ## Project structure
@@ -119,8 +122,12 @@ scripts/
   run_daily.ps1, register_daily_task.ps1   Windows Task Scheduler
   check_forbidden_files.py                 blocks .env / profile / resume / *.db from commits
 frontend/src/
-  pages/            Jobs, JobDetail, Tracker, NewBrief, Brief, History, Login, Register
-  components/       JobBadges, ApplicationEditor, ReferralPanel, ResumePanel, BriefPanel, …
+  pages/            Jobs, JobDetail, Tracker, NewBrief, Brief, History, Login (landing), Register
+  components/       JobBadges, ApplicationEditor, ReferralPanel, ResumePanel, BriefPanel, Markdown, …
+  components/ui/    shadcn/ui-style primitives (Button, Card, Badge, Input, Select, Skeleton, …)
+  components/layout AppShell (sidebar + mobile drawer), PageHeader, AuthLayout
+  theme/            light/dark/system theme provider + toaster
+  index.css         design tokens (colors, radii, fonts) for both themes
 tests/              pytest (236 tests) — every external API, LLM, Telegram and SMTP call mocked
 ```
 
@@ -208,7 +215,7 @@ Output goes to `logs\daily-YYYY-MM.log` (git-ignored; secrets redacted). Other c
 
 ```powershell
 pytest                                # 236 tests; no API keys or network needed
-cd frontend; npm run test             # 36 tests
+cd frontend; npm run test             # 60 tests
 ruff check . ; ruff format --check . ; mypy app tests
 cd frontend; npm run lint; npm run format:check; npm run build
 pre-commit run --all-files
@@ -227,11 +234,43 @@ pre-commit run --all-files
 - **The Reviewer's citation check** confirms every claim has a valid `[n]`, not that the source truly
   supports it.
 - **Not live-verified here:** actual Telegram/Gmail delivery (needs your credentials), Docker Compose,
-  and a full browser click-through. Run `test-digest` and click through the app once.
+  and a click-through against a real backend (the screenshots below use the production build with a
+  mocked API). Run `test-digest` and click through the app once.
 - **Single-user design for the digest** — it goes to the one person who runs the install.
 
 ## Screenshots
 
-Not included — this was built and verified through tests and API-level runs, not a browser session.
-Worth adding a few (jobs list, job page with brief/referral/resume panels, tracker, digest email)
-before sharing it as a portfolio piece.
+Production build in a real browser, with a mocked API and fictional companies.
+
+**Landing / login**: one sentence on what the app does, plus the sign-in form.
+
+![Landing and login page](docs/screenshots/login.png)
+
+**Jobs**: daily matches with fit scores, source badges, fresher-friendly flags and the AI's reason.
+
+| Light | Dark |
+|---|---|
+| ![Jobs, light theme](docs/screenshots/jobs.png) | ![Jobs, dark theme](docs/screenshots/jobs-dark.png) |
+
+**Job page**: why it fits, the description, tailored-resume diff, tracker and company brief.
+
+![Job detail page](docs/screenshots/job-detail.png)
+
+**Application tracker**: status filters with counts, follow-up reminders and notes.
+
+![Application tracker](docs/screenshots/tracker.png)
+
+**Company research brief**: the LLM report rendered as Markdown; each `[n]` citation is a chip that
+opens its source.
+
+| Light | Dark |
+|---|---|
+| ![Company brief, light theme](docs/screenshots/brief.png) | ![Company brief, dark theme](docs/screenshots/brief-dark.png) |
+
+**Briefs history** and **mobile** (responsive layout with a slide-out navigation drawer):
+
+![Company briefs](docs/screenshots/briefs.png)
+
+| Mobile | Mobile navigation |
+|---|---|
+| <img src="docs/screenshots/mobile-jobs.png" width="300" alt="Jobs on mobile"> | <img src="docs/screenshots/mobile-nav.png" width="300" alt="Mobile navigation drawer"> |

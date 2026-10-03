@@ -1,4 +1,7 @@
+import { Check, Copy } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "./ui/button";
 
 export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -7,6 +10,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
+      toast.success("Copied to clipboard");
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
       // Clipboard can be blocked (http origin, permissions) — fall back to a prompt to copy manually.
@@ -15,8 +19,9 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
   }
 
   return (
-    <button type="button" className="secondary small" onClick={() => void copy()}>
-      {copied ? "Copied ✓" : label}
-    </button>
+    <Button variant="outline" size="sm" onClick={() => void copy()}>
+      {copied ? <Check aria-hidden className="text-success" /> : <Copy aria-hidden />}
+      {copied ? "Copied" : label}
+    </Button>
   );
 }

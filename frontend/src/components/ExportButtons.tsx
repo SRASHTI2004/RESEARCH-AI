@@ -1,6 +1,10 @@
+import { CloudDownload, FileDown, FileText } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { api, ApiError } from "../api/client";
 import type { ResearchJob } from "../api/types";
+import { InlineError } from "./states";
+import { Button } from "./ui/button";
 
 function buildMarkdown(job: ResearchJob): string {
   return [`# ${job.company} — Company Research Brief`, "", job.final_report, ""].join("\n");
@@ -58,29 +62,47 @@ export function ExportButtons({ job }: { job: ResearchJob }) {
       const { url } = await api.getExportUrl(job.id);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (err) {
-      setServerDownloadError(err instanceof ApiError ? err.message : "Could not reach the server copy");
+      const message = err instanceof ApiError ? err.message : "Could not reach the server copy";
+      setServerDownloadError(message);
+      toast.error(message);
+    }
+  }
+
+  async function downloadPdf() {
+    try {
+      await exportPdf(job);
+      toast.success("PDF exported");
+    } catch {
+      toast.error("Could not build the PDF");
     }
   }
 
   return (
-    <div>
-      <div className="export-buttons">
-        <button
-          type="button"
-          onClick={() => download(`${job.company}-brief.md`, buildMarkdown(job), "text/markdown")}
+    <div className="flex flex-col items-end gap-2">
+      <div className="export-buttons flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            download(`${job.company}-brief.md`, buildMarkdown(job), "text/markdown");
+            toast.success("Markdown exported");
+          }}
         >
+          <FileText aria-hidden />
           Export Markdown
-        </button>
-        <button type="button" onClick={() => void exportPdf(job)}>
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => void downloadPdf()}>
+          <FileDown aria-hidden />
           Export PDF
-        </button>
+        </Button>
         {job.has_export && (
-          <button type="button" onClick={() => void downloadFromServer()}>
+          <Button variant="outline" size="sm" onClick={() => void downloadFromServer()}>
+            <CloudDownload aria-hidden />
             Download server copy
-          </button>
+          </Button>
         )}
       </div>
-      {serverDownloadError && <p className="field-error">{serverDownloadError}</p>}
+      {serverDownloadError && <InlineError>{serverDownloadError}</InlineError>}
     </div>
   );
 }

@@ -3,7 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ResearchAI — Company Research Brief</title>
+    <meta
+      name="description"
+      content="ResearchAI — daily developer job matches scored against your profile, with a tracker, referral helper, resume tailoring and cited company research."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>ResearchAI — Job Search Assistant</title>
+    <script>
+      // Apply the saved theme before first paint so dark mode doesn't flash.
+      (function () {
+        try {
+          var t = localStorage.getItem("researchai_theme") || "system";
+          var dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,45 +1,18 @@
-import { Link, Navigate, Outlet, Route, Routes } from "react-router-dom";
-import { useAuth } from "./auth/useAuth";
+import { lazy } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AppShell } from "./components/layout/AppShell";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { BriefPage } from "./pages/BriefPage";
-import { HistoryPage } from "./pages/HistoryPage";
-import { JobDetailPage } from "./pages/JobDetailPage";
-import { JobsPage } from "./pages/JobsPage";
 import { LoginPage } from "./pages/LoginPage";
-import { NewBriefPage } from "./pages/NewBriefPage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { TrackerPage } from "./pages/TrackerPage";
 
-function Layout() {
-  const { user, logout } = useAuth();
-
-  return (
-    <div className="app-shell">
-      <header className="app-header">
-        <Link to="/" className="brand">
-          Job Assistant
-        </Link>
-        <nav>
-          <Link to="/jobs">Jobs</Link>
-          <Link to="/tracker">Tracker</Link>
-          <Link to="/briefs/new">New Brief</Link>
-          <Link to="/history">Briefs</Link>
-        </nav>
-        {user && (
-          <div className="user-menu">
-            <span>{user.email}</span>
-            <button type="button" onClick={logout}>
-              Log out
-            </button>
-          </div>
-        )}
-      </header>
-      <main>
-        <Outlet />
-      </main>
-    </div>
-  );
-}
+// Signed-in pages are split out so the landing/login page loads fast;
+// AppShell wraps them in a Suspense boundary.
+const JobsPage = lazy(() => import("./pages/JobsPage").then((m) => ({ default: m.JobsPage })));
+const JobDetailPage = lazy(() => import("./pages/JobDetailPage").then((m) => ({ default: m.JobDetailPage })));
+const TrackerPage = lazy(() => import("./pages/TrackerPage").then((m) => ({ default: m.TrackerPage })));
+const NewBriefPage = lazy(() => import("./pages/NewBriefPage").then((m) => ({ default: m.NewBriefPage })));
+const BriefPage = lazy(() => import("./pages/BriefPage").then((m) => ({ default: m.BriefPage })));
+const HistoryPage = lazy(() => import("./pages/HistoryPage").then((m) => ({ default: m.HistoryPage })));
 
 export function App() {
   return (
@@ -49,7 +22,7 @@ export function App() {
       <Route
         element={
           <ProtectedRoute>
-            <Layout />
+            <AppShell />
           </ProtectedRoute>
         }
       >

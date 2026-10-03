@@ -31,7 +31,7 @@ describe("ReferralPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Show referral helper" }));
 
     expect(await screen.findByText('"Acme" "My College"')).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open search ↗" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open search" })).toHaveAttribute(
       "href",
       kit.search_strings[0].url,
     );
@@ -49,7 +49,7 @@ describe("ReferralPanel", () => {
     await user.click(screen.getAllByRole("button", { name: "Copy" })[1]);
 
     expect(writeText).toHaveBeenCalledWith("Hi [Name], ...");
-    expect(await screen.findByText("Copied ✓")).toBeInTheDocument();
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
   });
 
   it("marks the job as referral asked, creating a tracker entry if needed", async () => {

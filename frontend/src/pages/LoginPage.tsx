@@ -1,9 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/useAuth";
+import { FormField } from "../components/FormField";
+import { AuthLayout } from "../components/layout/AuthLayout";
+import { Alert, AlertTitle } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
 import { loginSchema, type LoginFormValues } from "../validation";
 
 export function LoginPage() {
@@ -27,30 +32,53 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <h1>Log in</h1>
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <label>
-          Email
-          <input type="email" autoComplete="email" {...register("email")} />
-        </label>
-        {errors.email && <p className="field-error">{errors.email.message}</p>}
+    <AuthLayout>
+      <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">Log in to see today's matches.</p>
 
-        <label>
-          Password
-          <input type="password" autoComplete="current-password" {...register("password")} />
-        </label>
-        {errors.password && <p className="field-error">{errors.password.message}</p>}
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 flex flex-col gap-5">
+        <FormField
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.com"
+          error={errors.email?.message}
+          {...register("email")}
+        />
+        <FormField
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          error={errors.password?.message}
+          {...register("password")}
+        />
 
-        {serverError && <p className="field-error">{serverError}</p>}
+        {serverError && (
+          <Alert variant="destructive" role="alert">
+            <AlertCircle aria-hidden />
+            <AlertTitle className="field-error">{serverError}</AlertTitle>
+          </Alert>
+        )}
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Logging in…" : "Log in"}
-        </button>
+        <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+          {isSubmitting ? (
+            <>
+              <Loader2 className="animate-spin" aria-hidden /> Logging in…
+            </>
+          ) : (
+            <>
+              Log in <ArrowRight aria-hidden />
+            </>
+          )}
+        </Button>
       </form>
-      <p>
-        No account? <Link to="/register">Register</Link>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        No account?{" "}
+        <Link to="/register" className="font-medium text-primary hover:underline">
+          Create one
+        </Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }
