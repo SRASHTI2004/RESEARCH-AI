@@ -53,3 +53,30 @@ class SourceRunOut(BaseModel):
     fetched_count: int
     new_count: int
     message: str
+
+
+class SearchStringOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    label: str
+    query: str
+    where: str
+    url: str
+
+
+class MessageDraftOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: str
+    title: str
+    body: str
+    char_count: int
+
+
+class ReferralKitOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    search_strings: list[SearchStringOut]
+    checklist: list[str]
+    drafts: list[MessageDraftOut]
+    notes: list[str]

@@ -7,6 +7,7 @@ import type {
   JobDetail,
   JobFilters,
   JobList,
+  ReferralKit,
   ResearchJob,
   ResearchSummary,
   SourceRun,
@@ -157,6 +158,8 @@ export const api = {
   getJob: (id: string) => request<JobDetail>(`/jobs/${id}`),
 
   jobSources: () => request<SourceRun[]>("/jobs/sources"),
+
+  getReferralKit: (jobId: string) => request<ReferralKit>(`/jobs/${jobId}/referral`),
 
   listApplications: (filters: ApplicationFilters = {}) =>
     request<ApplicationList>(`/applications${toQuery(filters)}`),

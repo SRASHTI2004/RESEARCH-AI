@@ -157,6 +157,15 @@ def block_notifications(monkeypatch):
     monkeypatch.setattr("app.services.scoring_service._sleep", lambda seconds: None)
 
 
+@pytest.fixture(autouse=True)
+def use_example_personal_files(monkeypatch):
+    """Tests never read the developer's real profile or master resume."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "profile_path", "config/profile.example.yaml")
+    monkeypatch.setattr(settings, "master_resume_path", "data/master_resume.example.yaml")
+
+
 @pytest.fixture
 def testing_session_factory():
     return _TestingSessionLocal

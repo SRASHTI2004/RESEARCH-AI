@@ -152,3 +152,10 @@ export interface ApplicationFilters {
   q?: string;
   due?: "overdue" | "today" | "week";
 }
+
+export interface ReferralKit {
+  search_strings: { label: string; query: string; where: string; url: string }[];
+  checklist: string[];
+  drafts: { kind: string; title: string; body: string; char_count: number }[];
+  notes: string[];
+}

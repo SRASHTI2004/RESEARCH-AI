@@ -66,12 +66,12 @@ GLOBAL_REMOTE = ("anywhere", "worldwide", "global", "world", "apac", "asia", "as
 _REMOTE_WORDS = re.compile(r"\b(?:fully\s+)?remote(?:\s+first)?\b|\bwork from home\b|\bwfh\b", re.IGNORECASE)
 
 
-def _has_word(text: str, word: str) -> bool:
+def has_word(text: str, word: str) -> bool:
     return re.search(rf"(?<![a-z0-9]){re.escape(word)}(?![a-z0-9])", text) is not None
 
 
 def _has_any(text: str, words: tuple[str, ...] | list[str]) -> bool:
-    return any(_has_word(text, w.lower()) for w in words)
+    return any(has_word(text, w.lower()) for w in words)
 
 
 def min_years_required(description: str) -> int | None:
@@ -154,7 +154,7 @@ def evaluate(
         return FilterResult(False, f"mid-level title ('{levelled.group(0)}')", 0)
     if not _has_any(title_l, profile.title_include_keywords):
         return FilterResult(False, "title is not a software/dev role", 0)
-    excluded = next((w for w in profile.title_exclude_keywords if _has_word(title_l, w.lower())), None)
+    excluded = next((w for w in profile.title_exclude_keywords if has_word(title_l, w.lower())), None)
     if excluded:
         return FilterResult(False, f"title contains excluded keyword '{excluded}'", 0)
 
@@ -168,8 +168,8 @@ def evaluate(
 
     # --- passed: compute a rough 0-100 rank for picking the LLM's top N ---
     haystack = f"{title}\n{description}\n{' '.join(tags)}".lower()
-    stack = sum(8 for s in profile.primary_skills if _has_word(haystack, s.lower()))
-    stack += sum(4 for s in profile.secondary_skills if _has_word(haystack, s.lower()))
+    stack = sum(8 for s in profile.primary_skills if has_word(haystack, s.lower()))
+    stack += sum(4 for s in profile.secondary_skills if has_word(haystack, s.lower()))
     score = min(stack, 40)
 
     if JUNIOR_SIGNALS.search(title):

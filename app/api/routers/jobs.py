@@ -5,10 +5,12 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
+from app.core.profile import load_profile
 from app.models.job import Job
 from app.models.user import User
 from app.repositories import job_repository as repo
-from app.schemas.job import JobDetail, JobList, JobSummary, SourceRunOut
+from app.schemas.job import JobDetail, JobList, JobSummary, ReferralKitOut, SourceRunOut
+from app.services.referral_service import build_referral_kit
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -58,3 +60,13 @@ def source_status(
 @router.get("/{job_id}", response_model=JobDetail)
 def get_job(job_id: str, db: Session = Depends(get_db), _user: User = Depends(get_current_user)) -> JobDetail:
     return JobDetail.model_validate(get_job_or_404(db, job_id))
+
+
+@router.get("/{job_id}/referral", response_model=ReferralKitOut)
+def referral_kit(
+    job_id: str, db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+) -> ReferralKitOut:
+    """Search strings, a checklist and message drafts for asking for a
+    referral. Generated from templates + your profile; nothing is sent."""
+    kit = build_referral_kit(get_job_or_404(db, job_id), load_profile())
+    return ReferralKitOut.model_validate(kit)

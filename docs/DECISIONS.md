@@ -676,3 +676,30 @@ their terms forbid scraping and none offers a free public jobs API.
 - **Dates:** follow-ups are calendar dates (`DATE`, not timestamps), and the
   frontend computes "today" in local time — `toISOString()` is UTC and is
   a day behind in IST before 05:30.
+
+## JSA Phase 4 — Referral helper
+
+- **Templates, not an LLM.** Search strings, checklist and drafts are
+  built deterministically from `profile.yaml` + the posting. Reasons:
+  instant and free (no quota), and every claim in a draft is traceable —
+  the only skills mentioned are ones that are in your profile **and** the
+  posting; recipient names are a `[Name]` placeholder, never guessed.
+- **No LinkedIn automation of any kind.** The backend never contacts
+  LinkedIn. Search strings are text to paste; the "Open search" links are
+  plain `linkedin.com/search/results/people/?keywords=…` (or Google) URLs
+  that open in *your* browser, under your own session. A `site:linkedin.com/in`
+  Google query is offered as a fallback for when LinkedIn search is limited.
+- **Searches:** alumni of your college at the company (skipped with a hint
+  if `college` is empty), people in the role (title stripped of team/level
+  noise: "Software Engineer, Backend (Python)" → "Software Engineer"),
+  recruiters / talent acquisition, engineering managers.
+- **Drafts:** referral ask, a LinkedIn connection note kept under the
+  300-character limit (with shorter fallbacks), recruiter intro ("is this
+  open to freshers?"), and a single polite follow-up.
+- **Checklist** favours warm paths (alumni → mutuals → team engineers →
+  recruiters → college groups) and good manners (ask one or two people,
+  confirm the role is open, log it in the tracker).
+- **"I asked for a referral"** sets the tracker status to `referral_asked`
+  (creating the entry if needed), which also schedules a 5-day follow-up.
+- Tests now always use `config/profile.example.yaml` (autouse fixture) —
+  no test can read your real profile.
