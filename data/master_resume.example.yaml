@@ -1,0 +1,71 @@
+# Example master resume — copy to data/private/master_resume.yaml
+# (git-ignored; scripts/check_forbidden_files.py blocks it from commits)
+# and replace EVERYTHING with your real details.
+#
+# This is the single source of truth for resume tailoring: a tailored
+# version can only reorder and reword what's written here. It can never
+# add a skill, number, project or job that isn't in this file — so put in
+# everything true you might want to use, and nothing that isn't.
+#
+# Tips:
+# - `id`s must be unique and stable (they link tailored bullets back to
+#   their originals for the diff and the no-invention checks).
+# - List each project's/job's real `tech`. A rewritten bullet may only
+#   mention technologies from its own item's bullets or `tech` list.
+# - Use real numbers only ("cut load time from 4s to 1.5s"); the tailor
+#   can't add numbers that aren't already in that bullet.
+
+contact:
+  name: "Your Name"
+  email: "you@example.com"
+  phone: "+91-00000-00000"
+  location: "City, India"
+  links:
+    github: "https://github.com/your-handle"
+    linkedin: "https://www.linkedin.com/in/your-handle"
+
+summary: >-
+  Full-stack developer with a 3-month software engineering internship,
+  building web apps with Python, FastAPI, React and TypeScript.
+
+skills:
+  - group: Languages
+    items: [Python, TypeScript, JavaScript, SQL]
+  - group: Frameworks & Libraries
+    items: [FastAPI, React, SQLAlchemy, Pydantic]
+  - group: Tools
+    items: [Git, Docker, PostgreSQL, pytest]
+
+experience:
+  - id: internship
+    title: Software Engineering Intern
+    org: Example Company
+    location: Remote
+    start: Jul 2026
+    end: Sep 2026
+    tech: [Python, FastAPI, PostgreSQL, React]
+    bullets:
+      - Built REST API endpoints in FastAPI for an internal reporting tool used by the operations team.
+      - Wrote pytest tests for existing services and fixed bugs found during code review.
+      - Built React components for a dashboard that displayed data from the new endpoints.
+
+projects:
+  - id: researchai
+    name: ResearchAI — Company Research Brief
+    link: "https://github.com/your-handle/researchai"
+    tech: [Python, FastAPI, React, TypeScript, LangGraph, SQLAlchemy, Alembic, Celery, Docker, GitHub Actions]
+    bullets:
+      - Built a multi-agent LLM pipeline with LangGraph that researches a company via web search and writes a cited brief.
+      - Added JWT auth, role-based access control and per-user job history with SQLAlchemy and Alembic migrations.
+      - Built a React + TypeScript frontend with live progress polling and set up CI with GitHub Actions.
+
+education:
+  - degree: B.Tech in Computer Science
+    school: Your College Name
+    location: City
+    start: "2022"
+    end: "2026"
+    score: "CGPA 8.0/10"
+
+achievements:
+  - Replace with real achievements, or delete this section.

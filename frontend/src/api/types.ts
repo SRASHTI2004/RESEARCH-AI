@@ -159,3 +159,30 @@ export interface ReferralKit {
   drafts: { kind: string; title: string; body: string; char_count: number }[];
   notes: string[];
 }
+
+export interface MasterResumeStatus {
+  exists: boolean;
+  message: string;
+  name: string;
+  experience: number;
+  projects: number;
+  skills: number;
+}
+
+export interface TailoredResumeSummary {
+  id: string;
+  job_id: string | null;
+  job_title: string;
+  company: string;
+  used_llm: boolean;
+  created_at: string;
+}
+
+export interface TailoredResume extends TailoredResumeSummary {
+  /** Structured resume (mirrors app/core/resume.py); only exported, never edited here. */
+  content: unknown;
+  diff: { op: " " | "-" | "+"; text: string }[];
+  warnings: string[];
+  keywords_matched: string[];
+  keywords_missing: string[];
+}

@@ -650,3 +650,30 @@ a.button.small {
 .draft .report-text {
   margin: 0;
 }
+
+.resume-diff {
+  max-height: 28rem;
+  overflow: auto;
+  padding: 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+.diff-add {
+  display: block;
+  background: #e6f4ea;
+  color: #1e6b34;
+}
+
+.diff-del {
+  display: block;
+  background: #fdecea;
+  color: #a12a1e;
+}
+
+.tailored .warnings {
+  margin: 0.5rem 0;
+}

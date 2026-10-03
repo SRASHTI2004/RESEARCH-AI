@@ -7,3 +7,4 @@ mypy==1.14.1
 types-requests==2.32.0.20241016
 pre-commit==4.0.1
 types-PyYAML==6.0.12.20260906
+pypdf==6.9.1

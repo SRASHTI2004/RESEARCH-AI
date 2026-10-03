@@ -4,6 +4,7 @@ import { api, ApiError } from "../api/client";
 import { ApplicationEditor } from "../components/ApplicationEditor";
 import { RedFlags, ScoreBadge, SourceBadge } from "../components/JobBadges";
 import { ReferralPanel } from "../components/ReferralPanel";
+import { ResumePanel } from "../components/ResumePanel";
 
 export function JobDetailPage() {
   const { id = "" } = useParams();
@@ -70,6 +71,8 @@ export function JobDetailPage() {
       </section>
 
       <ReferralPanel jobId={job.id} application={application} />
+
+      <ResumePanel jobId={job.id} />
 
       <section className="panel">
         <h2>Job description</h2>

@@ -703,3 +703,34 @@ their terms forbid scraping and none offers a free public jobs API.
   (creating the entry if needed), which also schedules a 5-day follow-up.
 - Tests now always use `config/profile.example.yaml` (autouse fixture) —
   no test can read your real profile.
+
+## JSA Phase 5 — Resume tailoring
+
+- **Master resume is structured YAML, not a PDF/DOCX.** `data/private/master_resume.yaml`
+  (git-ignored; blocked by `scripts/check_forbidden_files.py`; example in
+  `data/master_resume.example.yaml`). Parsing an arbitrary PDF reliably is
+  hard; a structured file makes "never invent" checkable because every
+  bullet has a stable ID tied to its own job/project.
+- **Code orders, the LLM only rewords, a validator decides.** Projects,
+  bullets and skills are re-ranked by overlap with the posting's
+  technologies (experience keeps chronological order; nothing is added or
+  dropped). The LLM rewords the summary and bullets, returned as JSON by
+  bullet ID. Each rewrite is checked against *its own item*: no new numbers
+  (digits or number words), no technology that item never mentioned, no
+  new capitalised names. A failing rewrite is discarded, the original is
+  kept and a warning shown. If the LLM is unavailable you still get the
+  reordering (`used_llm=false`).
+- **Missing keywords are shown, never added.** "In the posting but not in
+  your resume" is a prompt for *you* — add it to the master only if true.
+- **Keyword vocabulary avoids everyday words** ("go", "rest", "spring") so
+  "Spring 2027 internship" isn't read as a technology.
+- **Exports:** fpdf2 (PDF) and python-docx (DOCX), single column, standard
+  section headings, plain bullets, real selectable text — ATS-friendly. The
+  PDF uses a built-in font (no OS font dependency), so typographic
+  characters are mapped to ASCII.
+- **Tailored versions are stored** (`tailored_resumes`, owner-only like
+  the tracker) with the diff, warnings and keywords, so you can see what
+  you sent to which company. Downloads go through an authenticated blob
+  fetch (a plain link can't carry the bearer token).
+- **Synchronous endpoint** (one LLM call, ~5–15 s) rather than a Celery
+  job — simpler, and rate-limited to 10/min.

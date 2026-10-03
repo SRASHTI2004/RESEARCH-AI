@@ -7,10 +7,13 @@ import type {
   JobDetail,
   JobFilters,
   JobList,
+  MasterResumeStatus,
   ReferralKit,
   ResearchJob,
   ResearchSummary,
   SourceRun,
+  TailoredResume,
+  TailoredResumeSummary,
   TokenResponse,
   User,
 } from "./types";
@@ -128,6 +131,20 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return (await res.json()) as T;
 }
 
+/** Authenticated binary download (PDF/DOCX). Same refresh-on-401 as `request`. */
+async function requestBlob(path: string, _retried = false): Promise<Blob> {
+  const token = tokenStorage.getAccessToken();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401 && !_retried) {
+    if (await tryRefresh()) return requestBlob(path, true);
+    tokenStorage.clear();
+  }
+  if (!res.ok) throw new ApiError(res.status, await parseErrorDetail(res));
+  return res.blob();
+}
+
 export const api = {
   register: (email: string, password: string) =>
     request<User>("/auth/register", { method: "POST", body: { email, password }, auth: false }),
@@ -171,4 +188,18 @@ export const api = {
     request<Application>(`/applications/${id}`, { method: "PATCH", body }),
 
   deleteApplication: (id: string) => request<void>(`/applications/${id}`, { method: "DELETE" }),
+
+  masterResumeStatus: () => request<MasterResumeStatus>("/resume/master"),
+
+  tailorResume: (jobId: string) =>
+    request<TailoredResume>(`/jobs/${jobId}/tailored-resumes`, { method: "POST" }),
+
+  listTailoredResumes: (jobId: string) => request<TailoredResumeSummary[]>(`/jobs/${jobId}/tailored-resumes`),
+
+  getTailoredResume: (id: string) => request<TailoredResume>(`/tailored-resumes/${id}`),
+
+  exportTailoredResume: (id: string, format: "pdf" | "docx") =>
+    requestBlob(`/tailored-resumes/${id}/export?format=${format}`),
+
+  deleteTailoredResume: (id: string) => request<void>(`/tailored-resumes/${id}`, { method: "DELETE" }),
 };
