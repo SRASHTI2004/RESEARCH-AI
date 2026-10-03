@@ -21,6 +21,11 @@ class JobSummary(BaseModel):
     prefilter_reason: str
     rule_score: int
     red_flags: list[str]
+    llm_score: int | None
+    llm_reason: str | None
+    fresher_friendly: bool | None
+    # llm_score when present, else rule_score — what lists are sorted by.
+    score: int
 
 
 class JobDetail(JobSummary):

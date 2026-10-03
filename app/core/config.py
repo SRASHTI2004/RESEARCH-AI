@@ -10,12 +10,16 @@ class Settings(BaseSettings):
     llm_provider_order: str = "gemini,groq"
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
-    gemini_writer_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-flash-latest"
+    gemini_writer_model: str = "gemini-flash-latest"
+    # Job scoring runs daily in batches — a separate (lite) model keeps it
+    # off the brief pipeline's per-model free-tier quota.
+    gemini_scoring_model: str = "gemini-flash-lite-latest"
 
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-20b"
     groq_writer_model: str = "openai/gpt-oss-120b"
+    groq_scoring_model: str = "openai/gpt-oss-20b"
 
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1"
@@ -96,11 +100,15 @@ class Settings(BaseSettings):
     # LLM, in batches, with a pause between calls to stay inside free-tier
     # requests-per-minute limits.
     scoring_max_jobs: int = 30
-    scoring_batch_size: int = 5
-    scoring_min_interval_seconds: float = 6.0
+    scoring_batch_size: int = 10
+    scoring_min_interval_seconds: float = 13.0
 
     # --- Daily digest ---
     digest_top_n: int = 10
+    # AI-scored jobs below this aren't worth a digest slot.
+    digest_min_score: int = 40
+    # Only jobs first seen this recently are digest candidates.
+    digest_max_age_days: int = 7
     # Used to build "open in app" links inside the digest.
     app_base_url: str = "http://localhost:5173"
 

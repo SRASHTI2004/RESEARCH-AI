@@ -65,6 +65,10 @@ def test_non_dev_titles_are_rejected(profile, title):
         ("3-5 yrs experience with React", 3),
         ("We were founded 10 years ago. 1+ years experience preferred.", 1),
         ("No experience requirement mentioned.", None),
+        ("- 3+ years of professional software development", 3),
+        ("- 4–5 years building production frontend applications", 4),
+        ("Our 25+ years old company", None),
+        ("A 2 year warranty on hardware", None),
         ("2+ years of Python experience and 6+ years experience overall", 2),
     ],
 )

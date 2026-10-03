@@ -1,6 +1,7 @@
 import logging
+import time
 
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
 from app.core.llm.base import LLMProvider, ProviderRateLimited
@@ -23,6 +24,29 @@ class EmptyLLMResponseError(Exception):
     """
 
 
+_PERMANENT_ERROR_MARKERS = ("404", "not found", "no longer available", "does not exist")
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """A retired/misspelled model (404) fails identically on every retry —
+    skip straight to the next provider instead of burning backoff time.
+    Seen for real in Oct 2026 when Google retired gemini-2.0-flash."""
+    text = str(exc).lower()
+    return not any(marker in text for marker in _PERMANENT_ERROR_MARKERS)
+
+
+# (provider, stage) -> monotonic time until which it's skipped. Only set
+# when a provider says its *daily* free-tier quota is gone: every further
+# call today would just burn retries and backoff before falling back anyway.
+_daily_quota_cooldown: dict[tuple[str, str], float] = {}
+DAILY_QUOTA_COOLDOWN_SECONDS = 3600.0
+
+
+def _is_daily_quota(exc: Exception) -> bool:
+    text = str(exc).lower().replace(" ", "")
+    return "perday" in text
+
+
 def _ordered_providers() -> list[LLMProvider]:
     names = [p.strip() for p in settings.llm_provider_order.split(",") if p.strip()]
     providers = []
@@ -39,7 +63,7 @@ def _call_with_retries(provider: LLMProvider, prompt: str, temperature: float, s
     @retry(
         stop=stop_after_attempt(settings.llm_max_retries),
         wait=wait_exponential(multiplier=1, min=2, max=15),
-        retry=retry_if_exception_type(Exception),
+        retry=retry_if_exception(_is_retryable),
         reraise=True,
     )
     def _attempt() -> str:
@@ -69,10 +93,23 @@ def invoke_llm(prompt: str, *, temperature: float = 0.3, stage: str = "default")
             continue
 
         attempted = True
+        key = (provider.name, stage)
+        if _daily_quota_cooldown.get(key, 0.0) > time.monotonic():
+            errors.append(f"{provider.name}: daily quota exhausted (cooling down)")
+            continue
         try:
             return _call_with_retries(provider, prompt, temperature, stage)
         except ProviderRateLimited as exc:
-            logger.warning("LLM provider '%s' rate-limited, falling back: %s", provider.name, exc)
+            if _is_daily_quota(exc):
+                _daily_quota_cooldown[key] = time.monotonic() + DAILY_QUOTA_COOLDOWN_SECONDS
+                logger.warning(
+                    "LLM provider '%s' daily quota exhausted for stage '%s'; skipping it for %ds",
+                    provider.name,
+                    stage,
+                    DAILY_QUOTA_COOLDOWN_SECONDS,
+                )
+            else:
+                logger.warning("LLM provider '%s' rate-limited, falling back: %s", provider.name, exc)
             errors.append(f"{provider.name}: rate limited")
         except Exception as exc:
             logger.warning("LLM provider '%s' failed after retries, falling back: %s", provider.name, exc)

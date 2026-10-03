@@ -20,8 +20,12 @@ def _looks_like_rate_limit(exc: Exception) -> bool:
     return any(marker in text for marker in _RATE_LIMIT_MARKERS)
 
 
-def _model_for_stage(default_model: str, writer_model: str, stage: str) -> str:
-    return writer_model if stage == "writer" else default_model
+def _model_for_stage(default_model: str, writer_model: str, stage: str, scoring_model: str = "") -> str:
+    if stage == "writer":
+        return writer_model
+    if stage == "scoring" and scoring_model:
+        return scoring_model
+    return default_model
 
 
 def _as_text(content: str | list[str | dict]) -> str:
@@ -43,7 +47,9 @@ class GeminiProvider(LLMProvider):
     def invoke(self, prompt: str, *, temperature: float, stage: str) -> str:
         from langchain_google_genai import ChatGoogleGenerativeAI
 
-        model = _model_for_stage(settings.gemini_model, settings.gemini_writer_model, stage)
+        model = _model_for_stage(
+            settings.gemini_model, settings.gemini_writer_model, stage, settings.gemini_scoring_model
+        )
         client = ChatGoogleGenerativeAI(
             model=model,
             google_api_key=settings.gemini_api_key,
@@ -67,7 +73,9 @@ class GroqProvider(LLMProvider):
     def invoke(self, prompt: str, *, temperature: float, stage: str) -> str:
         from langchain_groq import ChatGroq
 
-        model = _model_for_stage(settings.groq_model, settings.groq_writer_model, stage)
+        model = _model_for_stage(
+            settings.groq_model, settings.groq_writer_model, stage, settings.groq_scoring_model
+        )
         client = ChatGroq(
             model=model,
             api_key=settings.groq_api_key,

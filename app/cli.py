@@ -3,6 +3,10 @@
 python -m app.cli fetch [--force] [--sources greenhouse,remotive]
 python -m app.cli refilter
 python -m app.cli sources
+python -m app.cli score [--limit 30]
+python -m app.cli digest
+python -m app.cli test-digest
+python -m app.cli run-daily      # fetch + score + digest (what the scheduler runs)
 """
 
 import argparse
@@ -13,7 +17,7 @@ from app.core.jobsources import ALL_SOURCE_NAMES, build_sources
 from app.core.logging import configure_logging
 from app.core.profile import load_profile
 from app.repositories import job_repository
-from app.services import job_ingest_service
+from app.services import daily_service, digest_service, job_ingest_service, scoring_service
 
 
 def _split(value: str | None) -> list[str] | None:
@@ -67,6 +71,63 @@ def cmd_sources(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_score(args: argparse.Namespace) -> int:
+    db = SessionLocal()
+    try:
+        summary = scoring_service.run_scoring(db, load_profile(), limit=args.limit)
+    finally:
+        db.close()
+    print(f"Scored {summary.scored}/{summary.candidates} jobs ({summary.failed_batches} failed batches).")
+    return 0
+
+
+def _print_channels(result: digest_service.DigestResult) -> None:
+    for channel, status in result.channels.items():
+        print(f"  {channel:9} {status}")
+
+
+def cmd_digest(_args: argparse.Namespace) -> int:
+    db = SessionLocal()
+    try:
+        result = digest_service.run_digest(db)
+    finally:
+        db.close()
+    print(f"Digest with {result.sent_items} jobs:")
+    _print_channels(result)
+    return 0 if result.delivered else 1
+
+
+def cmd_test_digest(_args: argparse.Namespace) -> int:
+    db = SessionLocal()
+    try:
+        result = digest_service.run_test_digest(db)
+    finally:
+        db.close()
+    print("Test digest (tries every configured channel, marks nothing as sent):")
+    _print_channels(result)
+    return 0 if result.delivered else 1
+
+
+def cmd_run_daily(_args: argparse.Namespace) -> int:
+    db = SessionLocal()
+    try:
+        report = daily_service.run_daily(db, load_profile())
+    finally:
+        db.close()
+    if report.ingest:
+        print(f"Fetch: {report.ingest.new} new jobs ({report.ingest.new_passing} pass the filter)")
+        for name, err in report.ingest.sources_failed.items():
+            print(f"  source FAILED {name}: {err}")
+    if report.scoring:
+        print(f"Score: {report.scoring.scored}/{report.scoring.candidates} scored")
+    if report.digest:
+        print(f"Digest: {report.digest.sent_items} jobs")
+        _print_channels(report.digest)
+    for step, err in report.errors.items():
+        print(f"STEP FAILED {step}: {err}")
+    return 1 if report.errors else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="Job Search Assistant")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -83,6 +144,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     sources = sub.add_parser("sources", help="Show the last run of each source")
     sources.set_defaults(func=cmd_sources)
+
+    score = sub.add_parser("score", help="LLM-score the top unscored jobs against your profile")
+    score.add_argument("--limit", type=int, default=None, help="Max jobs to score (default SCORING_MAX_JOBS)")
+    score.set_defaults(func=cmd_score)
+
+    digest = sub.add_parser("digest", help="Send today's digest to the enabled channels")
+    digest.set_defaults(func=cmd_digest)
+
+    test_digest = sub.add_parser("test-digest", help="Send a test digest to every configured channel")
+    test_digest.set_defaults(func=cmd_test_digest)
+
+    daily = sub.add_parser("run-daily", help="Fetch + score + digest (what the scheduler runs)")
+    daily.set_defaults(func=cmd_run_daily)
     return parser
 
 

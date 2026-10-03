@@ -20,11 +20,14 @@ SENIOR_TITLE = re.compile(
 # Level 2+ ladders: "SDE 2", "Software Engineer II", "Engineer 3". Fresher roles are level 1 / unlevelled.
 LEVELLED_TITLE = re.compile(r"\b(?:engineer|developer|sde|swe)[\s-]*(?:ii|iii|iv|v|[2-9])\b", re.IGNORECASE)
 
-# "5+ years of experience", "3-5 yrs experience", "minimum 4 years experience"
+# "5+ years of experience", "3-5 yrs experience", "4–5 years building production apps"
 _YEARS = re.compile(
-    r"(\d{1,2})\s*\+?\s*(?:(?:-|–|to)\s*\d{1,2}\s*\+?\s*)?(?:years?|yrs?)\b(?P<after>[^.\n]{0,40})",
+    r"(?P<n>\d{1,2})\s*(?P<plus>\+)?\s*(?:(?P<range>-|–|to)\s*\d{1,2}\s*\+?\s*)?(?:years?|yrs?)\b"
+    r"(?P<after>[^.\n]{0,60})",
     re.IGNORECASE,
 )
+_EXPERIENCE_WORD = re.compile(r"experien|exp\b", re.IGNORECASE)
+_NOT_A_REQUIREMENT = re.compile(r"\b(?:ago|old|warranty|anniversary|history)\b", re.IGNORECASE)
 
 JUNIOR_SIGNALS = re.compile(
     r"\b(junior|jr\.?|fresher|freshers|entry[- ]level|graduate|new grad|intern|internship|trainee|"
@@ -75,11 +78,15 @@ def min_years_required(description: str) -> int | None:
     """Smallest "N years ... experience" requirement in the text, or None.
     Smallest, because postings often list a low hard requirement plus
     higher "nice to have" numbers."""
-    found = [
-        int(m.group(1))
-        for m in _YEARS.finditer(description)
-        if re.search(r"experien|exp\b", m.group("after"), re.IGNORECASE)
-    ]
+    found = []
+    for m in _YEARS.finditer(description):
+        after = m.group("after")
+        if _NOT_A_REQUIREMENT.search(after):
+            continue
+        # "N+ years" and "N-M years" are requirement phrasing even without
+        # the word "experience" ("3+ years of professional development").
+        if _EXPERIENCE_WORD.search(after) or m.group("plus") or m.group("range"):
+            found.append(int(m.group("n")))
     return min(found) if found else None
 
 

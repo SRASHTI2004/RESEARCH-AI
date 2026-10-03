@@ -24,6 +24,7 @@ def get_job_or_404(db: Session, job_id: str) -> Job:
 def list_jobs(
     include_filtered: bool = False,
     min_score: int | None = Query(None, ge=0, le=100),
+    fresher_only: bool = False,
     source: str | None = None,
     q: str | None = Query(None, max_length=100),
     days: int | None = Query(None, ge=1, le=365, description="Only jobs first seen in the last N days"),
@@ -37,6 +38,7 @@ def list_jobs(
         db,
         include_filtered=include_filtered,
         min_score=min_score,
+        fresher_only=fresher_only,
         source=source,
         query=q,
         seen_since=seen_since,

@@ -83,3 +83,49 @@ def test_recovers_within_retry_budget_without_falling_back(monkeypatch):
     result = invoke_llm("hello")
     assert result == "ok"
     assert flaky.calls == 2
+
+
+def test_retired_model_404_is_not_retried(monkeypatch):
+    """A removed model fails identically every time — fall back immediately."""
+    retired = _StubProvider(
+        "primary", lambda n: RuntimeError("404 This model models/gemini-2.0-flash is no longer available.")
+    )
+    working = _StubProvider("secondary", lambda n: "fallback ok")
+    monkeypatch.setattr("app.core.llm.factory._ordered_providers", lambda: [retired, working])
+
+    assert invoke_llm("hello") == "fallback ok"
+    assert retired.calls == 1
+
+
+def test_daily_quota_exhaustion_skips_provider_for_the_cooldown(monkeypatch):
+    from app.core.llm import factory
+
+    monkeypatch.setattr(factory, "_daily_quota_cooldown", {})
+    exhausted = _StubProvider(
+        "primary",
+        lambda n: ProviderRateLimited("429 quota_id: GenerateRequestsPerDayPerProjectPerModel-FreeTier"),
+    )
+    working = _StubProvider("secondary", lambda n: "ok")
+    monkeypatch.setattr("app.core.llm.factory._ordered_providers", lambda: [exhausted, working])
+
+    assert invoke_llm("one", stage="scoring") == "ok"
+    calls_after_first = exhausted.calls
+    assert invoke_llm("two", stage="scoring") == "ok"
+    assert exhausted.calls == calls_after_first  # not even tried again
+    # A different stage uses a different model/quota bucket, so it's still tried.
+    invoke_llm("three", stage="writer")
+    assert exhausted.calls > calls_after_first
+
+
+def test_per_minute_rate_limit_does_not_trigger_cooldown(monkeypatch):
+    from app.core.llm import factory
+
+    monkeypatch.setattr(factory, "_daily_quota_cooldown", {})
+    limited = _StubProvider("primary", lambda n: ProviderRateLimited("429 PerMinute quota"))
+    working = _StubProvider("secondary", lambda n: "ok")
+    monkeypatch.setattr("app.core.llm.factory._ordered_providers", lambda: [limited, working])
+
+    invoke_llm("one")
+    first = limited.calls
+    invoke_llm("two")
+    assert limited.calls > first

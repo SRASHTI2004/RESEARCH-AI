@@ -573,3 +573,73 @@ their terms forbid scraping and none offers a free public jobs API.
   same code works on SQLite and Postgres.
 - **New deps:** `PyYAML` (config files), `defusedxml` (parsing WWR's RSS
   safely — no XML entity-expansion attacks from a remote feed).
+
+## JSA Phase 2 — LLM scoring + daily digest
+
+- **Scoring only the top N:** the rule score picks the 30 most promising
+  unscored jobs (first seen in the last 14 days); the LLM scores them in
+  batches of 10 (3 calls/day) with a 13 s pause between calls. Each job
+  gets `llm_score` 0–100, a one-sentence `llm_reason`, and
+  `fresher_friendly`. Unscored jobs (LLM down) are just retried next run.
+  Output parsing tolerates code fences/prose around the JSON; scores are
+  clamped; unknown ids ignored; 2 consecutive failed batches stop the run
+  early rather than burning quota.
+- **Gemini model retired (found live):** `gemini-2.0-flash` (the repo's
+  default since Phase 1) now returns 404 "no longer available", so every
+  call had been silently falling back to Groq after wasted retries.
+  Switched defaults to Google's rolling alias `gemini-flash-latest`, and
+  made 404/"not found"/"no longer available" errors **non-retryable** in
+  the LLM factory (they fail the same way every time).
+- **Free-tier reality (found live, Oct 2026):** `gemini-flash-latest` is
+  5 requests/min and **20 requests/day** on the free tier, and quotas are
+  per model. So scoring got its own stage model — `GEMINI_SCORING_MODEL=
+  gemini-flash-lite-latest` (and `GROQ_SCORING_MODEL`) — keeping the daily
+  job off the company-brief pipeline's quota. Google no longer publishes
+  free-tier numbers (only in AI Studio), so this was decided empirically.
+- **Daily-quota circuit breaker:** when a provider reports a *per-day*
+  quota exhaustion, the factory skips that (provider, stage) for an hour
+  instead of re-hitting it (with retries and backoff) for every batch.
+  Per-minute limits don't trigger it.
+- **Smart description excerpt (found live):** a 1,000-char prefix cut off
+  Rubrik's "2027 graduates only" line (char 1,270) and the LLM scored an
+  ineligible internship 60. The prompt now sends a 250-char intro plus the
+  lines that decide fit (requirements, years, batch, CGPA, location) — same
+  token budget, far better signal. The prompt also includes education and
+  says a clearly unmet hard requirement means < 30.
+- **Years rule broadened (found live):** "3+ years of professional
+  software development" and "4–5 years building production apps" have no
+  word "experience". A `+` or a range now counts as a requirement; "ago",
+  "old", "warranty" etc. don't. 52 → 36 jobs pass on the live data.
+- **Digest selection:** AI-scored jobs ≥ `DIGEST_MIN_SCORE` (40) first,
+  best first; free slots are topped up with not-yet-scored jobs by rule
+  score, labelled "(rule)" — so an LLM outage still yields a digest.
+  Only jobs first seen within 7 days; each job is sent at most once.
+- **Two independent channels:** Telegram (one compact HTML message, split
+  on item boundaries under the 4,096-char limit) and email via SMTP
+  (Gmail + App Password; multipart text + HTML table with title, company,
+  location, score, reason, red flags, apply link, and "open in app"
+  link). Each channel is `disabled` / `not configured` / `sent` /
+  `failed: …` independently; a failure is logged and never aborts the run.
+  Jobs are marked `digested_at` only if **at least one** channel delivered
+  — otherwise they stay queued for tomorrow.
+- **Secrets:** the Telegram token is part of the API URL, so a raw
+  `requests` exception would print it. Notifier errors are re-raised with
+  the token/password replaced by `***` and `from None` (no chained
+  traceback). A test injects both secrets into the failure path and asserts
+  neither appears in logs or results. `.env.example` placeholders
+  (`your-…-here`) count as "not configured".
+- **`test-digest`** sends a "[TEST]" digest to every *configured* channel
+  even if its `DIGEST_*_ENABLED` flag is still false (verify before you
+  switch it on), marks nothing as sent, and uses a sample item when the DB
+  is empty.
+- **Scheduling: CLI + Windows Task Scheduler** (`scripts/run_daily.ps1`,
+  `scripts/register_daily_task.ps1`). Considered: APScheduler inside the
+  API process (only runs while the server is up — a laptop's dev server
+  usually isn't at 9 am) and GitHub Actions cron (the SQLite DB with
+  first-seen/digest state wouldn't persist between runs, and secrets plus
+  personal profile would have to live in GitHub). Task Scheduler with
+  `-StartWhenAvailable` runs a missed job when the laptop wakes up; no
+  Docker, no extra RAM while idle.
+- **`run-daily` never raises:** fetch, score and digest are isolated steps
+  — all sources failing still scores/sends what's stored; the LLM failing
+  still sends a rule-ranked digest.

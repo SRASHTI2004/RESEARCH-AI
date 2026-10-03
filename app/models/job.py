@@ -52,6 +52,21 @@ class Job(Base):
     # Genuineness signals — heuristics, shown as "check this", never a verdict.
     red_flags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
+    # LLM scoring against the profile — only the rule-ranked top N per run.
+    llm_score: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    llm_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fresher_friendly: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Set once the job has gone out in a daily digest, so it's never re-sent.
+    digested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def score(self) -> int:
+        """What the UI/digest rank by: the LLM score when there is one,
+        otherwise the rule score."""
+        return self.llm_score if self.llm_score is not None else self.rule_score
+
 
 class SourceRun(Base):
     """One fetch attempt for one source — drives per-source polling

@@ -125,6 +125,38 @@ def block_job_source_network(monkeypatch):
     monkeypatch.setattr("app.core.jobsources.http.get_text", _blocked)
 
 
+@pytest.fixture(autouse=True)
+def block_notifications(monkeypatch):
+    """No test may reach Telegram or an SMTP server; tests that exercise the
+    channels install their own fakes on top of this."""
+
+    def _no_post(*args, **kwargs):
+        raise AssertionError("Unmocked Telegram HTTP call in a test")
+
+    def _no_smtp(*args, **kwargs):
+        raise AssertionError("Unmocked SMTP connection in a test")
+
+    # Start every test from "nothing configured", whatever the developer's
+    # real .env contains (tokens there must never influence or leak into tests).
+    from app.core.config import settings
+
+    for name in (
+        "telegram_bot_token",
+        "telegram_chat_id",
+        "smtp_username",
+        "smtp_password",
+        "digest_email_to",
+    ):
+        monkeypatch.setattr(settings, name, "")
+    monkeypatch.setattr(settings, "digest_telegram_enabled", False)
+    monkeypatch.setattr(settings, "digest_email_enabled", False)
+    monkeypatch.setattr(settings, "app_base_url", "http://localhost:5173")
+
+    monkeypatch.setattr("app.core.notify.requests.post", _no_post)
+    monkeypatch.setattr("app.core.notify.smtplib.SMTP", _no_smtp)
+    monkeypatch.setattr("app.services.scoring_service._sleep", lambda seconds: None)
+
+
 @pytest.fixture
 def testing_session_factory():
     return _TestingSessionLocal
