@@ -1,0 +1,39 @@
+# Company watchlist for the official ATS job-board sources.
+#
+# Each entry: name (display name), ats (greenhouse | lever | ashby), board
+# (the company's board token — the slug in their careers URL):
+#   Greenhouse: https://boards.greenhouse.io/<board>   or boards-api.greenhouse.io/v1/boards/<board>/jobs
+#   Lever:      https://jobs.lever.co/<board>
+#   Ashby:      https://jobs.ashbyhq.com/<board>
+#
+# Every board below was verified to respond on 2026-10-03. A board that
+# later 404s (company switched ATS) is logged and skipped — it never breaks
+# the rest of the run. Add/remove freely.
+
+companies:
+  # --- India-headquartered / large India engineering presence ---
+  - { name: Groww, ats: greenhouse, board: groww }
+  - { name: InMobi, ats: greenhouse, board: inmobi }
+  - { name: Druva, ats: greenhouse, board: druva }
+  - { name: HackerRank, ats: greenhouse, board: hackerrank }
+  - { name: Meesho, ats: lever, board: meesho }
+  - { name: CRED, ats: lever, board: cred }
+  - { name: Zeta, ats: lever, board: zeta }
+  - { name: Paytm, ats: lever, board: paytm }
+  - { name: FamPay, ats: lever, board: fampay }
+  - { name: Atlan, ats: ashby, board: atlan }
+  - { name: Sarvam AI, ats: ashby, board: sarvam }
+  - { name: Plane, ats: ashby, board: plane }
+
+  # --- Global companies that hire in India and/or fully remote ---
+  - { name: GitLab, ats: greenhouse, board: gitlab }
+  - { name: Cloudflare, ats: greenhouse, board: cloudflare }
+  - { name: Databricks, ats: greenhouse, board: databricks }
+  - { name: MongoDB, ats: greenhouse, board: mongodb }
+  - { name: Elastic, ats: greenhouse, board: elastic }
+  - { name: Twilio, ats: greenhouse, board: twilio }
+  - { name: Rubrik, ats: greenhouse, board: rubrik }
+  - { name: Stripe, ats: greenhouse, board: stripe }
+  - { name: Supabase, ats: ashby, board: supabase }
+  - { name: PostHog, ats: ashby, board: posthog }
+  - { name: Replit, ats: ashby, board: replit }

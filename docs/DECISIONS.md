@@ -464,3 +464,112 @@ at the bottom of each phase section.
   exercise the real `boto3` exception types (`ClientError`) against a fake
   client, not just stubbed-out success paths. Still to do: confirm a
   real upload/download round-trip after `docker compose up`.
+
+---
+
+# Job Search Assistant extension (JSA phases 1–6)
+
+The project was extended (October 2026) from a single-feature Company
+Research Brief app into a personal Job Search Assistant. The brief feature
+is kept intact and becomes a "Generate company brief" button on each job.
+Phases below are numbered **JSA 1–6** so they don't collide with the
+original rebuild's Phases 0–10 above. Nothing here auto-applies to jobs or
+auto-sends messages — that's a hard rule, not a missing feature.
+
+## JSA plan (decided up front)
+
+| # | Scope | Key choice |
+|---|---|---|
+| 1 | Sourcing + storage + rule filter | Public ATS APIs + public remote feeds only; one `jobs` table deduped by fingerprint |
+| 2 | LLM scoring + daily digest | Batch-score only the rule-ranked top 30; Telegram + Gmail SMTP independently; CLI + Windows Task Scheduler |
+| 3 | Tracker UI | `applications` table, per-user, status pipeline + notes + follow-up dates |
+| 4 | Referral helper | Deterministic templates (no LLM, nothing sent, no LinkedIn scraping) |
+| 5 | Resume tailoring | Structured YAML master resume; LLM may only reorder/reword; a validator rejects any new number/skill |
+| 6 | Brief integration + docs | Reuse `enqueue_research`; reuse a recent brief for the same company |
+
+## JSA Phase 1 — Sourcing, storage, pre-filter
+
+### Sources verified live on 2026-10-03
+
+Every source was called for real before any code was written, and its
+terms were read (from the response itself where the API embeds them):
+
+| Source | Endpoint | Terms / limits | Status |
+|---|---|---|---|
+| Greenhouse | `boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true` | Public Job Board API, published for displaying postings | ✅ used |
+| Lever | `api.lever.co/v0/postings/{board}?mode=json` | Public Postings API | ✅ used |
+| Ashby | `api.ashbyhq.com/posting-api/job-board/{board}` | Public Posting API | ✅ used |
+| Remotive | `remotive.com/api/remote-jobs?category=software-dev` | Link back + credit Remotive; "max 4 times a day"; jobs delayed 24h; no re-submitting to other aggregators | ✅ used, min interval 8h |
+| Remote OK | `remoteok.com/api` | Link back + name Remote OK as source; don't use their logo | ✅ used |
+| We Work Remotely | category RSS feeds (`/categories/remote-*-programming-jobs.rss`) | No public JSON API; RSS is published for syndication, `robots.txt` allows `/` | ✅ used (RSS) |
+| Himalayas | `himalayas.app/jobs/api/search` | Link back + credit Himalayas; data cached 24h ("polling more than once per day provides no benefit"); 20 jobs/page | ✅ used, min interval 20h |
+| Arbeitnow | `arbeitnow.com/api/job-board-api` | "Free public API… please do not abuse", link back appreciated. Mostly EU/German jobs → few pass the India/remote filter | ✅ used |
+| Adzuna (India) | `api.adzuna.com/v1/api/jobs/in/search/1` | Free developer key required (`app_id` + `app_key`) | ⏸ implemented, **skipped until you add a key** (returns 400 without one) |
+
+**Not used, by design:** LinkedIn, Naukri, Indeed, Glassdoor, Wellfound —
+their terms forbid scraping and none offers a free public jobs API.
+
+**Live run result:** 4,472 postings fetched across the 8 keyless sources in
+~75 s → 3,638 unique jobs after dedupe → 52 pass the pre-filter.
+
+### Decisions
+
+- **One source interface** (`JobSource.fetch() -> list[NormalizedJob]`)
+  mirroring the existing `LLMProvider` / `SearchProvider` pattern. All
+  network access goes through `app/core/jobsources/http.py` so tests stub
+  exactly two functions, and an autouse fixture makes any un-stubbed call
+  fail loudly.
+- **Company watchlist** in `config/companies.yaml` (committed — it isn't
+  personal). Seeded with 23 boards that were verified to respond on
+  2026-10-03 (Indian companies + global companies that hire in India or
+  remote). A board that 404s later is logged and skipped; only if *every*
+  board of an ATS fails is that source marked `error`.
+- **Dedupe key = fingerprint(company, title)**, normalized (case,
+  punctuation, "(Remote)", "(m/f/d)" removed). Location is deliberately
+  excluded so an aggregator re-post collapses onto the official listing.
+  Trade-off: the same title in two cities at one company collapses into
+  one row — acceptable for a personal digest (you want one entry per role).
+- **Official boards win:** within a run and across runs, a Greenhouse/
+  Lever/Ashby copy replaces an aggregator copy of the same role
+  (`official_source=True` is shown as a badge and adds +5 to the rule score).
+- **`first_seen_at` / `last_seen_at`** on every job; "new" = first seen in
+  this run. Digest state (`digested_at`) is added in JSA Phase 2.
+- **Per-source polling intervals** via a `source_runs` table (also powers
+  the "last fetched" status in the UI and `python -m app.cli sources`).
+  `--force` overrides them for manual runs.
+- **Pre-filter is biased towards inclusion** — a false reject silently
+  loses a job, a false accept just costs one LLM slot. Order: seniority
+  words → level-2+ titles (`SDE 2`, `Engineer II`, `Engineer 3`) → title
+  must look like a dev role → excluded title words → "N+ years experience"
+  (smallest number found, sentence-bounded) → location.
+- **Location rules:** India city / "India" passes (any Indian city by
+  default; `accept_any_india_city: false` restricts onsite roles to
+  `preferred_cities`). Remote passes only if nothing but "remote" /
+  "worldwide" / "anywhere" / "APAC" remains — `Remote (US)`,
+  `Foster City, CA` or `Pakistan` mean the role is limited to that region.
+- **Tightened after looking at real data:** the first live run let through
+  "Video Editor Intern", "SDE 2 Infra", and remote roles pinned to US
+  cities. `intern` was removed from the title-include list (tech intern
+  titles already contain engineer/developer/SDE), a level-2+ title rule was
+  added, and the location rule was inverted from "reject known foreign
+  regions" to "reject anything that isn't India/global". 80 → 52 matches,
+  all plausibly relevant.
+- **Genuineness checks** (`app/services/genuineness.py`) are heuristics
+  worded as "check this": fees/deposits, Telegram/WhatsApp contact,
+  personal email domains, guaranteed placement/no interview, per-day or
+  commission-only pay, unusually high pay for a junior title, vague/missing
+  company, very short description. Flags never hide a job.
+- **Profile** lives in `config/profile.yaml` (git-ignored). If it's missing
+  the app falls back to the committed `config/profile.example.yaml` with a
+  warning, so a fresh clone still runs.
+- **Forbidden-files check:** the brief asked to "update the existing
+  forbidden-files check", but none existed (only `.gitignore`). Created
+  `scripts/check_forbidden_files.py` (blocks `.env*` except examples,
+  `config/profile.yaml`, `data/private/*`, `*.db`, `*resume*.pdf/.docx`,
+  keys), wired into pre-commit (staged files) and CI (all tracked files),
+  with a test that asserts the repo is currently clean.
+- **SQLite timezone gotcha:** `DateTime(timezone=True)` comes back naive on
+  SQLite; `ensure_utc()` re-attaches UTC before any date arithmetic so the
+  same code works on SQLite and Postgres.
+- **New deps:** `PyYAML` (config files), `defusedxml` (parsing WWR's RSS
+  safely — no XML entity-expansion attacks from a remote feed).

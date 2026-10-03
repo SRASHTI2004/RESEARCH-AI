@@ -14,6 +14,13 @@ repos:
   # plugin configured in pyproject.toml, instead of a separate stub set.
   - repo: local
     hooks:
+      - id: forbidden-files
+        name: block secrets / personal files (.env, profile, resume, db)
+        entry: python scripts/check_forbidden_files.py
+        language: system
+        # Runs on every staged file, whatever its type.
+        types: [file]
+
       - id: mypy
         name: mypy
         entry: mypy app tests

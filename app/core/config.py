@@ -73,6 +73,49 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/0"
     celery_task_always_eager: bool = True
 
+    # --- Job Search Assistant ---
+    # Personal files: profile.yaml and the master resume are git-ignored
+    # (scripts/check_forbidden_files.py enforces it); the *.example.* files
+    # next to them are what's committed.
+    profile_path: str = "config/profile.yaml"
+    companies_path: str = "config/companies.yaml"
+    master_resume_path: str = "data/private/master_resume.yaml"
+
+    # Comma-separated job sources to run. Unknown names are skipped with a
+    # warning; sources that need a key (adzuna) skip themselves when unset.
+    job_sources: str = "greenhouse,lever,ashby,remotive,remoteok,weworkremotely,himalayas,arbeitnow,adzuna"
+    job_source_timeout_seconds: float = 20.0
+    job_source_user_agent: str = "ResearchAI-JobAssistant/1.0 (personal, non-commercial job search)"
+
+    # Adzuna (optional) — free developer key from https://developer.adzuna.com
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    adzuna_country: str = "in"
+
+    # LLM scoring: only the top-N rule-ranked jobs per run are sent to the
+    # LLM, in batches, with a pause between calls to stay inside free-tier
+    # requests-per-minute limits.
+    scoring_max_jobs: int = 30
+    scoring_batch_size: int = 5
+    scoring_min_interval_seconds: float = 6.0
+
+    # --- Daily digest ---
+    digest_top_n: int = 10
+    # Used to build "open in app" links inside the digest.
+    app_base_url: str = "http://localhost:5173"
+
+    digest_telegram_enabled: bool = False
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+
+    digest_email_enabled: bool = False
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    digest_email_from: str = ""
+    digest_email_to: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

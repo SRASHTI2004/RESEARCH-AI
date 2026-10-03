@@ -113,6 +113,37 @@ def mock_search(monkeypatch):
     monkeypatch.setattr("app.pipeline.agents.researcher.gather_sources", _fake_gather_sources)
 
 
+@pytest.fixture(autouse=True)
+def block_job_source_network(monkeypatch):
+    """Job sources only reach the network through app.core.jobsources.http —
+    fail loudly if a test forgets to stub it, instead of hitting real boards."""
+
+    def _blocked(url, params=None):
+        raise AssertionError(f"Unmocked job-source HTTP call in a test: {url}")
+
+    monkeypatch.setattr("app.core.jobsources.http.get_json", _blocked)
+    monkeypatch.setattr("app.core.jobsources.http.get_text", _blocked)
+
+
+@pytest.fixture
+def testing_session_factory():
+    return _TestingSessionLocal
+
+
+@pytest.fixture
+def profile():
+    from app.core.profile import LocationPrefs, Profile
+
+    return Profile(
+        name="Test User",
+        email="test@example.com",
+        college="Test Institute of Technology",
+        primary_skills=["Python", "React", "TypeScript", "FastAPI"],
+        secondary_skills=["SQL", "Docker"],
+        locations=LocationPrefs(preferred_cities=["Pune"]),
+    )
+
+
 def _register_and_login(client: TestClient, email: str, password: str = DEFAULT_PASSWORD) -> dict:
     client.post("/auth/register", json={"email": email, "password": password})
     res = client.post("/auth/login", json={"email": email, "password": password})

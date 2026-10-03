@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.routers import auth, health, research
+from app.api.routers import auth, health, jobs, research
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware import RequestLoggingMiddleware
@@ -57,3 +57,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(research.router)
+app.include_router(jobs.router)

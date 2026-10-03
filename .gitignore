@@ -35,3 +35,9 @@ Thumbs.db
 
 # docker
 *.env.docker
+
+# personal job-search data — never commit (enforced by scripts/check_forbidden_files.py)
+config/profile.yaml
+data/private/
+*.resume.pdf
+*.resume.docx

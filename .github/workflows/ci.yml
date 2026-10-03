@@ -20,11 +20,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      - name: Forbidden files (secrets, profile, resume, db)
+        run: python scripts/check_forbidden_files.py
+
       - name: Lint (ruff)
-        run: ruff check app tests
+        run: ruff check app tests scripts
 
       - name: Format check (ruff)
-        run: ruff format --check app tests
+        run: ruff format --check app tests scripts
 
       - name: Type check (mypy)
         run: mypy app tests

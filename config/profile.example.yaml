@@ -1,0 +1,47 @@
+# Copy this file to config/profile.yaml (git-ignored) and fill it in.
+# Everything here is matched against job postings by the filter, the LLM
+# scorer, the referral helper and the resume tailor.
+
+name: "Your Name"
+email: "you@example.com"
+college: "Your College Name"
+degree: "B.Tech Computer Science"
+graduation_year: 2026
+headline: "Fresher full-stack developer"
+summary: >-
+  Fresher full-stack developer (Python, FastAPI, React, TypeScript) with a
+  3-month software internship. Looking for junior / fresher / intern
+  software roles.
+experience_level: fresher
+# Jobs that explicitly require more years than this are filtered out.
+max_years_experience: 2
+
+target_roles:
+  - Software Engineer
+  - Full Stack Developer
+  - Backend Developer
+  - Frontend Developer
+  - Software Engineer Intern
+
+primary_skills: [Python, FastAPI, React, TypeScript, JavaScript]
+secondary_skills: [SQL, PostgreSQL, Git, Docker, REST, HTML, CSS, Node.js]
+
+locations:
+  preferred_cities: []   # e.g. [Bengaluru, Pune, Hyderabad]
+  countries: [India]
+  accept_any_india_city: true
+  remote_ok: true
+  open_to_global_remote: true
+
+# Free-text queries for search-style sources (Himalayas, Adzuna).
+search_queries: ["software engineer", "full stack developer", "python developer"]
+
+links:
+  github: "https://github.com/your-handle"
+  linkedin: "https://www.linkedin.com/in/your-handle"
+  portfolio: ""
+
+# Optional overrides of the default title keyword lists
+# (see app/core/profile.py for the defaults):
+# title_include_keywords: [engineer, developer, sde, intern]
+# title_exclude_keywords: [sales, marketing, recruiter]
