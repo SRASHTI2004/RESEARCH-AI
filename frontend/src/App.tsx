@@ -3,9 +3,12 @@ import { useAuth } from "./auth/useAuth";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { BriefPage } from "./pages/BriefPage";
 import { HistoryPage } from "./pages/HistoryPage";
+import { JobDetailPage } from "./pages/JobDetailPage";
+import { JobsPage } from "./pages/JobsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NewBriefPage } from "./pages/NewBriefPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { TrackerPage } from "./pages/TrackerPage";
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -14,11 +17,13 @@ function Layout() {
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="brand">
-          ResearchAI
+          Job Assistant
         </Link>
         <nav>
-          <Link to="/">New Brief</Link>
-          <Link to="/history">History</Link>
+          <Link to="/jobs">Jobs</Link>
+          <Link to="/tracker">Tracker</Link>
+          <Link to="/briefs/new">New Brief</Link>
+          <Link to="/history">Briefs</Link>
         </nav>
         {user && (
           <div className="user-menu">
@@ -48,7 +53,11 @@ export function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<NewBriefPage />} />
+        <Route path="/" element={<Navigate to="/jobs" replace />} />
+        <Route path="/jobs" element={<JobsPage />} />
+        <Route path="/jobs/:id" element={<JobDetailPage />} />
+        <Route path="/tracker" element={<TrackerPage />} />
+        <Route path="/briefs/new" element={<NewBriefPage />} />
         <Route path="/briefs/:id" element={<BriefPage />} />
         <Route path="/history" element={<HistoryPage />} />
       </Route>

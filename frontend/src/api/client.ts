@@ -1,4 +1,18 @@
-import type { ResearchJob, ResearchSummary, TokenResponse, User } from "./types";
+import type {
+  Application,
+  ApplicationCreate,
+  ApplicationFilters,
+  ApplicationList,
+  ApplicationUpdate,
+  JobDetail,
+  JobFilters,
+  JobList,
+  ResearchJob,
+  ResearchSummary,
+  SourceRun,
+  TokenResponse,
+  User,
+} from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -69,6 +83,17 @@ async function tryRefresh(): Promise<boolean> {
   }
 }
 
+/** Builds "?a=1&b=x" from defined, non-empty values only. */
+export function toQuery(params: object): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "" || value === false) continue;
+    search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text ? `?${text}` : "";
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, auth = true, _retried = false } = options;
 
@@ -126,4 +151,21 @@ export const api = {
   listResearch: () => request<ResearchSummary[]>("/research"),
 
   getExportUrl: (id: string) => request<{ url: string }>(`/research/${id}/export`),
+
+  listJobs: (filters: JobFilters = {}) => request<JobList>(`/jobs${toQuery(filters)}`),
+
+  getJob: (id: string) => request<JobDetail>(`/jobs/${id}`),
+
+  jobSources: () => request<SourceRun[]>("/jobs/sources"),
+
+  listApplications: (filters: ApplicationFilters = {}) =>
+    request<ApplicationList>(`/applications${toQuery(filters)}`),
+
+  createApplication: (body: ApplicationCreate) =>
+    request<Application>("/applications", { method: "POST", body }),
+
+  updateApplication: (id: string, body: ApplicationUpdate) =>
+    request<Application>(`/applications/${id}`, { method: "PATCH", body }),
+
+  deleteApplication: (id: string) => request<void>(`/applications/${id}`, { method: "DELETE" }),
 };

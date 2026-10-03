@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core import notify
 from app.core.config import settings
 from app.models.job import Job
+from app.repositories import application_repository
 
 logger = logging.getLogger(__name__)
 
@@ -271,8 +272,19 @@ def send_digest(content: DigestContent, *, ignore_enabled_flags: bool = False) -
 
 
 def collect_follow_ups(db: Session, today: date | None = None) -> list[FollowUp]:
-    """Replaced in JSA Phase 3 once the application tracker exists."""
-    return []
+    """Tracker entries whose follow-up date has arrived (overdue included)."""
+    base = settings.app_base_url.rstrip("/")
+    return [
+        FollowUp(
+            title=a.title,
+            company=a.company,
+            status=a.status.replace("_", " "),
+            due=a.follow_up_on,
+            app_url=f"{base}/tracker?focus={a.id}",
+        )
+        for a in application_repository.due_follow_ups(db, today or date.today())
+        if a.follow_up_on is not None
+    ]
 
 
 def run_digest(db: Session) -> DigestResult:

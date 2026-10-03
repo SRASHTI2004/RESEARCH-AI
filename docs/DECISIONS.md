@@ -643,3 +643,36 @@ their terms forbid scraping and none offers a free public jobs API.
 - **`run-daily` never raises:** fetch, score and digest are isolated steps
   — all sources failing still scores/sends what's stored; the LLM failing
   still sends a rule-ranked digest.
+
+## JSA Phase 3 — Application tracker
+
+- **`applications` table, per user** (unlike `jobs`, which are shared):
+  status (`saved → applied → referral_asked → interview → rejected/offer`),
+  notes, `applied_on`, `follow_up_on`. Unique per (user, job) — saving a
+  job twice returns the existing entry (idempotent "Save" button).
+- **`job_id` is nullable**, so you can also track a role found elsewhere
+  (college group, referral) by title + company; title/company/url/location
+  are copied from the job at save time so the entry stays readable even if
+  the posting is cleaned up later (`ON DELETE SET NULL`).
+- **Strictly owner-only, no admin override** — unlike research briefs,
+  tracker notes are personal. Other users (admins included) get 404.
+- **Follow-up defaults:** moving to `applied` sets `applied_on` = today and
+  a reminder 7 days out; `referral_asked` → 5 days; `interview` → 3 days —
+  only when you didn't send a date yourself. Changing status resets the
+  reminder to the new stage's default. Reminders only count while the
+  application is active (not rejected/offer).
+- **Reminders surface in two places:** the tracker (overdue / due-today
+  badges, "due this week" filter) and the daily digest ("Follow-ups due"
+  section in both Telegram and email). The digest includes every user's
+  due follow-ups because the digest channels belong to the one person who
+  runs this install — documented single-user assumption.
+- **Frontend:** `/jobs` (filters: search, min score, source, recency,
+  fresher-only, show filtered-out; source status line; Save button),
+  `/jobs/:id` (score, reason, red flags, apply link, tracker editor,
+  description), `/tracker` (status chips with counts, follow-up filter,
+  search, inline status/date/notes editing, manual entries, `?focus=` deep
+  link used by the digest). `/` now redirects to `/jobs`; the brief form
+  moved to `/briefs/new`. Notes save on blur rather than per keystroke.
+- **Dates:** follow-ups are calendar dates (`DATE`, not timestamps), and the
+  frontend computes "today" in local time — `toISOString()` is UTC and is
+  a day behind in IST before 05:30.
