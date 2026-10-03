@@ -1,16 +1,20 @@
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.db import get_db
 from app.core.profile import load_profile
+from app.core.rate_limit import limiter
 from app.models.job import Job
 from app.models.user import User
 from app.repositories import job_repository as repo
+from app.repositories import research_repository
 from app.schemas.job import JobDetail, JobList, JobSummary, ReferralKitOut, SourceRunOut
+from app.schemas.research import ResearchResponse, ResearchSummary
 from app.services.referral_service import build_referral_kit
+from app.services.research_service import enqueue_research
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -70,3 +74,24 @@ def referral_kit(
     referral. Generated from templates + your profile; nothing is sent."""
     kit = build_referral_kit(get_job_or_404(db, job_id), load_profile())
     return ReferralKitOut.model_validate(kit)
+
+
+@router.get("/{job_id}/brief", response_model=ResearchSummary | None)
+def latest_company_brief(
+    job_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> ResearchSummary | None:
+    """Your latest Company Research Brief for this job's company, or null."""
+    job = get_job_or_404(db, job_id)
+    brief = research_repository.latest_for_company(db, job.company, user.id)
+    return ResearchSummary.model_validate(brief) if brief else None
+
+
+@router.post("/{job_id}/brief", response_model=ResearchResponse, status_code=202)
+@limiter.limit("10/minute")
+def generate_company_brief(
+    request: Request, job_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> ResearchResponse:
+    """Runs the existing research pipeline for this job's company — same
+    path as POST /research, so it shows up in brief history too."""
+    job = get_job_or_404(db, job_id)
+    return ResearchResponse.model_validate(enqueue_research(db, job.company, user.id))

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { ApplicationEditor } from "../components/ApplicationEditor";
+import { BriefPanel } from "../components/BriefPanel";
 import { RedFlags, ScoreBadge, SourceBadge } from "../components/JobBadges";
 import { ReferralPanel } from "../components/ReferralPanel";
 import { ResumePanel } from "../components/ResumePanel";
@@ -69,6 +70,8 @@ export function JobDetailPage() {
           </button>
         )}
       </section>
+
+      <BriefPanel jobId={job.id} company={job.company} />
 
       <ReferralPanel jobId={job.id} application={application} />
 

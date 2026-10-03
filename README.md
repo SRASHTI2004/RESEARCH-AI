@@ -1,207 +1,237 @@
-# ResearchAI — Company Research Brief
+# ResearchAI — Job Search Assistant + Company Research Briefs
 
-A multi-agent pipeline that researches a company via live web search and produces a sourced, cited
-brief: company overview, recent news, tech stack, and interview prep questions. Built as a
-production-style rebuild of a personal project — see [`docs/DECISIONS.md`](docs/DECISIONS.md) for the
-full phase-by-phase engineering log, including how to
-talk about it.
+A personal job-search assistant for a fresher full-stack developer. Every day it pulls new postings
+from **legal, free job APIs**, filters and scores them against your profile, flags possible scams, and
+sends you the top matches on **Telegram and email**. In the web app you track applications, get help
+asking for referrals, tailor your resume to a posting (without inventing anything), and generate a
+cited **Company Research Brief** for any job's company.
+
+It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a message for you.
+
+See [`docs/DECISIONS.md`](docs/DECISIONS.md) for the phase-by-phase engineering log,
+
 
 ## What it does
 
-Enter a company name. Four pipeline stages run in sequence, each persisted to the database as it
-completes so the UI can show live progress:
+| Feature | Where | How |
+|---|---|---|
+| **Job sourcing** | `app/core/jobsources/` | Greenhouse, Lever and Ashby public board APIs for the companies in `config/companies.yaml`, plus Remotive, Remote OK, We Work Remotely (RSS), Himalayas, Arbeitnow and Adzuna India (optional key). Each source's API and terms were checked before use — see `docs/DECISIONS.md`. Jobs are normalized, deduped (official boards win over aggregators) and stored with `first_seen_at` / `last_seen_at`. |
+| **Rule pre-filter** | `app/services/job_filter.py` | Cheap and free: drops senior/lead/"5+ years"/level-2+ titles, non-dev roles, and locations outside India or global remote. Biased towards keeping a job when unsure. |
+| **LLM scoring** | `app/services/scoring_service.py` | Only the rule-ranked top ~30 per run are scored 0–100 against `config/profile.yaml`, with a one-line reason and a *fresher-friendly?* flag. Gemini → Groq fallback, paced for free-tier limits. |
+| **Genuineness flags** | `app/services/genuineness.py` | Fees, Telegram/WhatsApp-only contact, personal email domains, unrealistic pay, vague company… shown as "check this", never as a verdict. |
+| **Daily digest** | `app/services/digest_service.py` | Top 10 new matches to **Telegram** and an **HTML email** (Gmail SMTP). The channels are independent: one failing never stops the other or the run. Includes due tracker follow-ups. |
+| **Application tracker** | `/tracker` | saved → applied → referral asked → interview → rejected / offer, with notes, follow-up dates, filters and counts. |
+| **Referral helper** | job page | LinkedIn search strings (alumni / team / recruiters) to paste yourself, a where-to-look checklist, and message drafts. No LinkedIn automation. |
+| **Resume tailoring** | job page | Reorders and rewords your real master resume for the posting. A validator rejects any rewrite that adds numbers, tools or names. Shows a diff; exports ATS-friendly PDF/DOCX. |
+| **Company brief** | job page / `/briefs/new` | The original multi-agent research pipeline (below), one click from any job. Existing briefs are reused. |
 
-1. **Researcher** — searches the web (DuckDuckGo), fetches and extracts page content, and asks an LLM
-   to synthesize research notes with a numbered citation (`[1]`, `[2]`, ...) on every claim.
-2. **Analyzer** — organizes the research into four sections: Company Overview, Recent News, Tech
-   Stack, Interview Prep Questions — preserving citations.
-3. **Writer** — produces the final formatted brief, plus a Sources section.
-4. **Reviewer** — fact-checks the draft against the source list, flagging any claim with a missing or
-   invalid citation in a "Verification Notes" section.
+### The Company Research Brief pipeline
 
-The result is persisted, versioned by status (`researching` → `analyzing` → `writing` → `done`, or
-`failed` with an error message), and retrievable by anyone who has access to it — not just the person
-who ran it.
+Four LangGraph stages, each persisted as it completes so the UI shows live progress:
+
+1. **Researcher** — searches the web (DuckDuckGo), extracts page content, writes notes with numbered
+   citations (`[1]`, `[2]`, …) on every claim.
+2. **Analyzer** — organizes them into Company Overview, Recent News, Tech Stack, Interview Prep
+   Questions.
+3. **Writer** — produces the final brief plus a Sources section.
+4. **Reviewer** — flags any claim with a missing or invalid citation.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
     subgraph Client
-        FE["React + TypeScript SPA<br/>(Vite, TanStack Query, React Router)"]
+        FE["React + TypeScript SPA<br/>Jobs · Tracker · Briefs"]
+        TG["Telegram"]
+        MAIL["Email (Gmail SMTP)"]
+    end
+
+    subgraph Daily["Daily job (Windows Task Scheduler → python -m app.cli run-daily)"]
+        Fetch["fetch: job sources → normalize → dedupe → pre-filter → red flags"]
+        Score["score: top ~30 → LLM 0-100 + reason"]
+        Digest["digest: top 10 new → each channel independently"]
     end
 
     subgraph API["FastAPI (app/)"]
-        Routers["Routers<br/>auth · research · health"]
-        Services["Services<br/>auth_service · research_service"]
-        Repos["Repositories<br/>user_repository · research_repository"]
-        Core["Core<br/>security (JWT/bcrypt) · rate_limit · llm · search · storage"]
+        Routers["Routers<br/>auth · jobs · applications · resumes · research · health"]
+        Services["Services<br/>filter · scoring · digest · referral · resume_tailor · research"]
+        Repos["Repositories"]
     end
 
-    subgraph Worker["Celery worker (app/worker/)"]
-        Task["run_research_job<br/>streams the LangGraph pipeline,<br/>persists progress after every stage"]
-        Pipeline["LangGraph pipeline (app/pipeline/)<br/>Researcher → Analyzer → Writer → Reviewer"]
+    subgraph Worker["Celery task (eager in-process by default)"]
+        Pipeline["LangGraph: Researcher → Analyzer → Writer → Reviewer"]
     end
 
-    DB[("PostgreSQL<br/>(SQLite fallback for local dev)")]
-    Redis[("Redis<br/>Celery broker + result backend")]
-    Storage[("MinIO / S3<br/>optional: exported report files")]
+    DB[("SQLite (default) or PostgreSQL")]
+    Sources["Job APIs<br/>Greenhouse · Lever · Ashby · Remotive · Remote OK<br/>WWR RSS · Himalayas · Arbeitnow · Adzuna"]
+    LLM["LLM providers<br/>Gemini → Groq → Ollama"]
+    Search["DuckDuckGo + page fetch"]
 
-    LLM["LLM providers<br/>Gemini → Groq → Ollama<br/>(ordered fallback, per-provider retries)"]
-    Search["Web search<br/>DuckDuckGo (ddgs) + page-content fetch"]
-
-    FE -->|"REST + JWT Bearer"| Routers
-    Routers --> Services
-    Services --> Repos
-    Repos --> DB
-    Services -->|enqueue| Redis
-    Redis --> Task
-    Task --> Pipeline
+    FE -->|"REST + JWT"| Routers --> Services --> Repos --> DB
+    Services --> Worker
     Pipeline --> LLM
     Pipeline --> Search
-    Task --> Repos
-    Task -.->|best-effort export| Storage
-    FE -.->|presigned download URL| Storage
+    Fetch --> Sources
+    Score --> LLM
+    Fetch & Score & Digest --> DB
+    Digest --> TG
+    Digest --> MAIL
+    Services -->|tailor| LLM
 ```
 
-**Why this shape:** the API never runs the LLM pipeline inline — `POST /research` creates a job row and
-hands it to a Celery task, returning immediately (`202 Accepted`). The frontend polls
-`GET /research/{id}` and watches `status` advance through each stage. Locally (no Redis in most dev
-setups), Celery runs in **eager mode** — the same task code executes synchronously in-process, so
-everything still works without extra infrastructure; `docker-compose` flips this to a real background
-worker. See `docs/DECISIONS.md` (Phase 5) for details.
+Everything runs on a Windows laptop with 8 GB RAM and **no Docker**: SQLite by default, Celery in eager
+(in-process) mode, and Windows Task Scheduler for the daily run. Docker Compose (Postgres, Redis, a real
+worker, MinIO) is still there for anyone who has Docker.
 
 ## Tech stack
 
 | Layer | Choice | Why |
 |---|---|---|
-| Backend | FastAPI, Pydantic v2 | async-friendly, typed request/response contracts, free OpenAPI docs |
-| Database | PostgreSQL + SQLAlchemy 2.0 + Alembic | real relational DB with versioned schema migrations |
-| Auth | JWT (access + refresh) + bcrypt | industry-standard stateless auth; no session store needed |
-| Async jobs | Celery + Redis | decouples slow LLM calls from the request/response cycle |
-| AI orchestration | LangGraph | explicit state machine for a multi-stage agent pipeline, with per-stage persistence via `.stream()` |
-| LLM providers | Gemini (primary) → Groq (fallback) → Ollama (optional, local) | free-tier friendly, with automatic fallback on rate limits/outages |
-| Web search | DuckDuckGo (`ddgs`), `trafilatura` for content extraction | free, no API key, grounds the pipeline in real sources instead of model recall |
-| Object storage | MinIO (S3-compatible) via `boto3` | optional; same code works against real AWS S3 |
-| Frontend | React 19 + TypeScript, Vite, TanStack Query, React Router, React Hook Form + Zod | typed contracts end-to-end, server-state-aware data fetching |
-| Quality | ruff, mypy, ESLint, Prettier, pytest, Vitest | enforced in CI and pre-commit, not just locally |
-| Infra | Docker, docker-compose, GitHub Actions | reproducible local stack; CI needs no secrets or real infra (everything's mocked/eager) |
+| Backend | FastAPI, Pydantic v2 | typed contracts, free OpenAPI docs |
+| Database | SQLAlchemy 2.0 + Alembic; SQLite or PostgreSQL | versioned migrations; switch by `DATABASE_URL` only |
+| Auth | JWT (access + refresh) + bcrypt | stateless; per-user tracker, resumes and briefs |
+| AI | LangGraph pipeline; provider-agnostic LLM layer (Gemini → Groq → Ollama) | free-tier friendly with automatic fallback |
+| Jobs | public ATS + remote-job APIs via `requests`; RSS via `defusedxml` | legal, free, no scraping; safe XML parsing |
+| Notifications | Telegram Bot API, `smtplib` (Gmail App Password) | free; secrets redacted from logs |
+| Documents | `fpdf2` (PDF), `python-docx` (DOCX) | ATS-friendly single-column resumes |
+| Frontend | React 19 + TypeScript, Vite, TanStack Query, React Router, React Hook Form + Zod | typed end to end |
+| Quality | ruff, mypy, ESLint, Prettier, pytest, Vitest, forbidden-files check | in CI and pre-commit |
 
 ## Project structure
 
 ```
 app/
-  api/            FastAPI routers + auth dependency
-  core/            config, security, llm (provider factory), search, storage, rate_limit, middleware
-  models/          SQLAlchemy ORM models
-  pipeline/        LangGraph agents + graph + web-sourcing
-  repositories/     DB access layer
-  schemas/         Pydantic request/response models
-  services/        orchestration layer between routers and pipeline/worker
-  worker/          Celery app + the research-job task
-alembic/           database migrations
-frontend/
-  src/api/          typed fetch client + hand-written types
-  src/auth/        auth context + hook
-  src/components/   ProgressStages, SourceList, ExportButtons, ProtectedRoute
-  src/pages/       Login, Register, NewBrief, Brief (polling), History
-tests/             pytest suite (56 tests) — all LLM/search calls mocked
-docs/
-  DECISIONS.md     phase-by-phase engineering log (the "why" behind every choice)
+  api/routers/      auth · jobs (+ /referral, /brief) · applications · resumes · research · health
+  core/             config, security, llm, search, jobsources/, notify, profile, resume, storage
+  models/           users, research jobs, jobs, source runs, applications, tailored resumes
+  pipeline/         LangGraph research agents
+  repositories/     DB access
+  schemas/          Pydantic request/response models
+  services/         filter, genuineness, ingest, scoring, digest, daily, referral, resume_*, research
+  worker/           Celery app + research task
+  cli.py            python -m app.cli fetch | refilter | sources | score | digest | test-digest | run-daily
+config/
+  companies.yaml            ATS watchlist (committed — edit freely)
+  profile.example.yaml      copy to profile.yaml (git-ignored)
+data/
+  master_resume.example.yaml  copy to private/master_resume.yaml (git-ignored)
+scripts/
+  run_daily.ps1, register_daily_task.ps1   Windows Task Scheduler
+  check_forbidden_files.py                 blocks .env / profile / resume / *.db from commits
+frontend/src/
+  pages/            Jobs, JobDetail, Tracker, NewBrief, Brief, History, Login, Register
+  components/       JobBadges, ApplicationEditor, ReferralPanel, ResumePanel, BriefPanel, …
+tests/              pytest (236 tests) — every external API, LLM, Telegram and SMTP call mocked
 ```
 
-## Setup
+## Setup (Windows, no Docker)
 
-### Prerequisites
+Prerequisites: Python 3.12, Node.js 20+.
 
-- Python 3.12
-- Node.js 20+
-- (Optional) Docker + Docker Compose, for the full containerized stack
+### 1. Backend
 
-### 1. Get a free LLM API key
-
-The pipeline needs at least one configured provider. **Gemini is recommended as primary** — its free
-tier is more generous than Groq's for a 4-stage pipeline (see `docs/DECISIONS.md` Phase 2 for why).
-
-- Gemini (free): https://aistudio.google.com/apikey
-- Groq (free, fallback): https://console.groq.com
-
-### 2. Backend
-
-```bash
+```powershell
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+venv\Scripts\activate
 pip install -r requirements-dev.txt
 
-cp .env.example .env
-# edit .env: add GEMINI_API_KEY and/or GROQ_API_KEY,
-# and generate a real SECRET_KEY:
+copy .env.example .env
+# Generate a SECRET_KEY and paste it into .env:
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 alembic upgrade head
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload       # API docs: http://127.0.0.1:8000/docs
 ```
 
-API docs: http://127.0.0.1:8000/docs
+### 2. Frontend
 
-### 3. Frontend
-
-```bash
+```powershell
 cd frontend
 npm install
-cp .env.example .env            # defaults to http://127.0.0.1:8000, fine for local dev
-npm run dev
+copy .env.example .env               # defaults to http://127.0.0.1:8000
+npm run dev                          # http://localhost:5173 — register an account, then log in
 ```
 
-App: http://localhost:5173
+### 3. Your personal files (never committed)
 
-### 4. Or: the full stack via Docker
+| File | From | What to put in it |
+|---|---|---|
+| `.env` | `.env.example` | `SECRET_KEY`, `GEMINI_API_KEY` (free: https://aistudio.google.com/apikey), `GROQ_API_KEY` (free fallback: https://console.groq.com), optional `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` (https://developer.adzuna.com) |
+| `config/profile.yaml` | `config/profile.example.yaml` | skills, target roles, cities, college (used by filter, scorer, referral helper) |
+| `data/private/master_resume.yaml` | `data/master_resume.example.yaml` | your **real** experience, projects, skills — the tailor can only reorder/reword what's here |
 
-```bash
-cp .env.example .env            # add your LLM key(s) here too — docker-compose reads this file
-docker compose up --build
+`scripts/check_forbidden_files.py` (pre-commit + CI) refuses commits containing any of these.
+
+### 4. Daily digest setup
+
+**Telegram (free):**
+1. In Telegram, message **@BotFather** → `/newbot` → copy the token.
+2. Send your new bot any message.
+3. Open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `message.chat.id`.
+4. In `.env`: `DIGEST_TELEGRAM_ENABLED=true`, `TELEGRAM_BOT_TOKEN=…`, `TELEGRAM_CHAT_ID=…`.
+
+**Email (Gmail):**
+1. Turn on 2-Step Verification, then create an App Password at https://myaccount.google.com/apppasswords.
+2. In `.env`: `DIGEST_EMAIL_ENABLED=true`, `SMTP_USERNAME`, `SMTP_PASSWORD` (the 16-character App
+   Password, not your normal password), `DIGEST_EMAIL_FROM`, `DIGEST_EMAIL_TO`.
+
+**Check both:**
+
+```powershell
+python -m app.cli test-digest        # sends a sample digest to every configured channel, reports each
 ```
 
-This also starts Postgres, Redis, a real Celery worker, and MinIO. Not verified live in this
-environment (no Docker available while building it — see `docs/DECISIONS.md` Phase 7) — **please run
-this once to confirm** before relying on it.
+### 5. Run it every day
 
-### Running tests
+```powershell
+# once, to try it by hand:
+python -m app.cli run-daily          # fetch → score → digest
 
-```bash
-# backend
-pytest -v                       # 56 tests, all LLM/search calls mocked — no API key needed
-
-# frontend
-cd frontend && npm run test     # 16 tests
+# schedule it (09:00 daily; runs when you next log in if the laptop was off):
+powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1
+powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1 -At 08:30   # other time
+powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1 -Remove     # undo
 ```
 
-### Quality checks
+Output goes to `logs\daily-YYYY-MM.log` (git-ignored; secrets redacted). Other commands:
+`python -m app.cli fetch --force`, `refilter` (after editing your profile), `sources`, `score`, `digest`.
 
-```bash
-ruff check app tests && ruff format --check app tests && mypy app tests
-cd frontend && npm run lint && npm run format:check
-pre-commit run --all-files      # runs all of the above, plus whitespace/large-file checks
+### Daily routine
+
+1. Read the digest (Telegram or email) → open promising jobs in the app.
+2. On a job: check the red flags → **Save to tracker** → **Generate company brief** if you're serious.
+3. **Tailor resume** → review the diff → download PDF → apply on the company's site.
+4. Mark **Applied**; use the **Referral helper** to find alumni/engineers and copy a message draft.
+5. Follow-ups that fall due show up in the next digest and under **Tracker → Due**.
+
+## Tests and quality checks
+
+```powershell
+pytest                                # 236 tests; no API keys or network needed
+cd frontend; npm run test             # 36 tests
+ruff check . ; ruff format --check . ; mypy app tests
+cd frontend; npm run lint; npm run format:check; npm run build
+pre-commit run --all-files
 ```
 
 ## Known limitations
 
-- **Groq's free tier (8000 tokens/minute) can be tight** for a 4-stage pipeline with rich source
-  content on Groq alone — add a Gemini key as primary to avoid this in practice. The app handles the
-  rate limit gracefully (retries, clear error message, partial progress preserved) either way.
-- **The Reviewer's "fact-check" is an LLM self-review**, not a formal verifier — it catches citation
-  bookkeeping errors (a claim with no `[n]` or an invalid one) but doesn't verify that a cited source
-  *actually supports* the claim's content.
-- **Docker and MinIO were not live-verified** in the environment this was built in (no Docker
-  available) — the code and config are correct by inspection and unit-tested, but `docker compose up`
-  should be run once to confirm end-to-end.
-
-See `docs/DECISIONS.md` for the full, phase-by-phase reasoning behind every design choice, and
-`docs/DECISIONS.md` for the reasoning behind each choice.
+- **Free-tier LLM limits.** Scoring is capped at ~30 jobs/run and paced; a company brief uses four LLM
+  calls. Gemini as primary avoids most of Groq's 8,000 tokens/minute limit.
+- **Sources cover what has a public API.** Many Indian companies only post on LinkedIn/Naukri, which
+  this deliberately doesn't touch. Add companies that use Greenhouse/Lever/Ashby to
+  `config/companies.yaml`.
+- **Red flags and scores are heuristics.** Always verify on the company's official site.
+- **Resume tailoring's validator is conservative.** It may reject a harmless rewrite (you keep your
+  original wording); it can't judge whether your master resume itself is accurate — that's on you.
+- **The Reviewer's citation check** confirms every claim has a valid `[n]`, not that the source truly
+  supports it.
+- **Not live-verified here:** actual Telegram/Gmail delivery (needs your credentials), Docker Compose,
+  and a full browser click-through. Run `test-digest` and click through the app once.
+- **Single-user design for the digest** — it goes to the one person who runs the install.
 
 ## Screenshots
 
-Not included — this was built and verified via API-level testing (`pytest`, `curl`, live CORS/auth
-round-trips) rather than a browser session. Run the app locally and it's worth
-adding a few here (new brief → progress view → final report with citations → history) before sharing
-this as a portfolio piece.
+Not included — this was built and verified through tests and API-level runs, not a browser session.
+Worth adding a few (jobs list, job page with brief/referral/resume panels, tracker, digest email)
+before sharing it as a portfolio piece.

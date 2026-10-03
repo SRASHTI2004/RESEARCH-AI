@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.research_job import ResearchJob, ResearchSource
@@ -60,3 +60,18 @@ def list_jobs(db: Session, limit: int = 50, owner_id: str | None = None) -> list
     if owner_id is not None:
         stmt = stmt.where(ResearchJob.owner_id == owner_id)
     return list(db.scalars(stmt))
+
+
+def latest_for_company(db: Session, company: str, owner_id: str) -> ResearchJob | None:
+    """Most recent brief this user ran for `company` (case/whitespace-insensitive)
+    — lets a job page reuse an existing brief instead of spending LLM quota again."""
+    stmt = (
+        select(ResearchJob)
+        .where(
+            ResearchJob.owner_id == owner_id,
+            func.lower(func.trim(ResearchJob.company)) == company.strip().lower(),
+        )
+        .order_by(ResearchJob.created_at.desc())
+        .limit(1)
+    )
+    return db.scalars(stmt).first()

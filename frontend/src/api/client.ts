@@ -176,6 +176,10 @@ export const api = {
 
   jobSources: () => request<SourceRun[]>("/jobs/sources"),
 
+  getJobBrief: (jobId: string) => request<ResearchSummary | null>(`/jobs/${jobId}/brief`),
+
+  generateJobBrief: (jobId: string) => request<ResearchJob>(`/jobs/${jobId}/brief`, { method: "POST" }),
+
   getReferralKit: (jobId: string) => request<ReferralKit>(`/jobs/${jobId}/referral`),
 
   listApplications: (filters: ApplicationFilters = {}) =>

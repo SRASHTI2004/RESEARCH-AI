@@ -734,3 +734,19 @@ their terms forbid scraping and none offers a free public jobs API.
   fetch (a plain link can't carry the bearer token).
 - **Synchronous endpoint** (one LLM call, ~5–15 s) rather than a Celery
   job — simpler, and rate-limited to 10/min.
+
+## JSA Phase 6 — Company brief integration + docs
+
+- **No schema change to link jobs and briefs.** A job's brief is found by
+  company name (trimmed, case-insensitive) among *your* briefs:
+  `GET /jobs/{id}/brief` returns the latest or `null`. Adding a
+  `job_id` to `research_jobs` would tie one brief to one posting, but a
+  brief is about the company — five Acme jobs should share one brief.
+- **`POST /jobs/{id}/brief` reuses `enqueue_research()`** — the exact path
+  `POST /research` uses, so progress polling, history, export and
+  ownership rules all apply unchanged. Rate-limited 10/min like `/research`.
+- **Reuse before regenerate.** A brief costs four LLM calls, so the job
+  page shows "View company brief" when one exists and "Regenerate" as a
+  secondary action. A failed brief isn't offered for viewing.
+- **Docs:** README rewritten around the Job Search Assistant (setup for
+  personal files, Telegram/Gmail, Task Scheduler, a daily routine);
