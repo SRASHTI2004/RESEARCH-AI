@@ -7,6 +7,7 @@ python -m app.cli score [--limit 30]
 python -m app.cli digest
 python -m app.cli test-digest
 python -m app.cli run-daily      # fetch + score + digest (what the scheduler runs)
+python -m app.cli seed-demo      # reset the demo account (DEMO_ENABLED=true)
 """
 
 import argparse
@@ -17,7 +18,7 @@ from app.core.jobsources import ALL_SOURCE_NAMES, build_sources
 from app.core.logging import configure_logging
 from app.core.profile import load_profile
 from app.repositories import job_repository
-from app.services import daily_service, digest_service, job_ingest_service, scoring_service
+from app.services import daily_service, demo_service, digest_service, job_ingest_service, scoring_service
 
 
 def _split(value: str | None) -> list[str] | None:
@@ -128,6 +129,22 @@ def cmd_run_daily(_args: argparse.Namespace) -> int:
     return 1 if report.errors else 0
 
 
+def cmd_seed_demo(_args: argparse.Namespace) -> int:
+    db = SessionLocal()
+    try:
+        summary = demo_service.seed_demo(db)
+    except demo_service.DemoDisabledError:
+        print("DEMO_ENABLED is off; nothing to do.")
+        return 0
+    finally:
+        db.close()
+    print(
+        f"Demo seeded: {summary.jobs_added} sample jobs added, "
+        f"{summary.applications} tracker entries, {summary.briefs} briefs"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="Job Search Assistant")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -157,6 +174,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     daily = sub.add_parser("run-daily", help="Fetch + score + digest (what the scheduler runs)")
     daily.set_defaults(func=cmd_run_daily)
+
+    seed = sub.add_parser("seed-demo", help="Create/reset the demo account and its sample data")
+    seed.set_defaults(func=cmd_seed_demo)
     return parser
 
 

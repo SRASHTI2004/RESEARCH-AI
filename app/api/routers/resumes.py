@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_llm_budget
 from app.api.routers.jobs import get_job_or_404
 from app.core.db import get_db
 from app.core.rate_limit import limiter
@@ -49,7 +49,12 @@ def master_status(_user: User = Depends(get_current_user)) -> MasterResumeStatus
     )
 
 
-@router.post("/jobs/{job_id}/tailored-resumes", response_model=TailoredResumeOut, status_code=201)
+@router.post(
+    "/jobs/{job_id}/tailored-resumes",
+    response_model=TailoredResumeOut,
+    status_code=201,
+    dependencies=[Depends(require_llm_budget)],
+)
 @limiter.limit("10/minute")
 def create_tailored_resume(
     request: Request,

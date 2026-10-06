@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_llm_budget
 from app.core import storage
 from app.core.db import get_db
 from app.core.rate_limit import limiter
@@ -25,7 +25,7 @@ def _get_visible_job_or_404(db: Session, job_id: str, current_user: User) -> Res
     return job
 
 
-@router.post("", response_model=ResearchResponse, status_code=202)
+@router.post("", response_model=ResearchResponse, status_code=202, dependencies=[Depends(require_llm_budget)])
 @limiter.limit("10/minute")
 def create_research(
     request: Request,

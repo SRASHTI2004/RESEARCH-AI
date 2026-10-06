@@ -8,6 +8,7 @@ import type {
   JobFilters,
   JobList,
   MasterResumeStatus,
+  PublicConfig,
   ReferralKit,
   ResearchJob,
   ResearchSummary,
@@ -159,7 +160,15 @@ export const api = {
     return tokens;
   },
 
+  demoLogin: async (): Promise<TokenResponse> => {
+    const tokens = await request<TokenResponse>("/auth/demo", { method: "POST", auth: false });
+    tokenStorage.setTokens(tokens);
+    return tokens;
+  },
+
   me: () => request<User>("/auth/me"),
+
+  publicConfig: () => request<PublicConfig>("/config", { auth: false }),
 
   createResearch: (company: string) =>
     request<ResearchJob>("/research", { method: "POST", body: { company } }),

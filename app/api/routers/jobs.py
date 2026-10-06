@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_llm_budget
 from app.core.db import get_db
 from app.core.profile import load_profile
 from app.core.rate_limit import limiter
@@ -86,7 +86,12 @@ def latest_company_brief(
     return ResearchSummary.model_validate(brief) if brief else None
 
 
-@router.post("/{job_id}/brief", response_model=ResearchResponse, status_code=202)
+@router.post(
+    "/{job_id}/brief",
+    response_model=ResearchResponse,
+    status_code=202,
+    dependencies=[Depends(require_llm_budget)],
+)
 @limiter.limit("10/minute")
 def generate_company_brief(
     request: Request, job_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)

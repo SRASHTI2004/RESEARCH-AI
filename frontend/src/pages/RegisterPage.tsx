@@ -10,11 +10,13 @@ import { FormField } from "../components/FormField";
 import { AuthLayout } from "../components/layout/AuthLayout";
 import { Alert, AlertTitle } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
+import { usePublicConfig } from "../lib/publicConfig";
 import { registerSchema, type RegisterFormValues } from "../validation";
 
 export function RegisterPage() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const config = usePublicConfig();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
@@ -31,6 +33,22 @@ export function RegisterPage() {
     } catch (err) {
       setServerError(err instanceof ApiError ? err.message : "Registration failed");
     }
+  }
+
+  if (!config.registration_enabled) {
+    return (
+      <AuthLayout>
+        <h2 className="text-2xl font-semibold tracking-tight">Sign-up is closed here</h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          This public deployment runs on free-tier AI quotas, so it only offers a shared demo account.
+        </p>
+        <Button asChild size="lg" className="mt-8 w-full">
+          <Link to="/login">
+            Go to the demo <ArrowRight aria-hidden />
+          </Link>
+        </Button>
+      </AuthLayout>
+    );
   }
 
   return (

@@ -1,9 +1,11 @@
-import { Briefcase, FileText, KanbanSquare, Menu, Sparkles, X, type LucideIcon } from "lucide-react";
+import { Briefcase, FileText, Info, KanbanSquare, Menu, Sparkles, X, type LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ListSkeleton } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/auth/useAuth";
+import { usePublicConfig } from "@/lib/publicConfig";
 import { cn } from "@/lib/utils";
 import { Brand } from "./Brand";
 import { CompactUserMenu, SidebarUserMenu } from "./UserMenu";
@@ -52,6 +54,31 @@ function SidebarFooterNote() {
     <p className="px-3 text-xs leading-relaxed text-muted-foreground">
       Never scrapes, never auto-applies, never sends a message for you.
     </p>
+  );
+}
+
+function DemoBanner() {
+  const { user } = useAuth();
+  const config = usePublicConfig();
+  if (!user?.is_demo) return null;
+  const left = config.llm_actions_left_today;
+  return (
+    <div
+      role="note"
+      className="mb-6 flex items-start gap-2.5 rounded-lg border bg-muted/50 px-3.5 py-2.5 text-sm text-muted-foreground"
+    >
+      <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <p>
+        You're in the shared demo account. Anything you change is reset when the server restarts.
+        {left !== null && (
+          <>
+            {" "}
+            {left} AI {left === 1 ? "action" : "actions"} (briefs, resume tailoring) left today across all
+            visitors.
+          </>
+        )}
+      </p>
+    </div>
   );
 }
 
@@ -136,6 +163,7 @@ export function AppShell() {
 
       <main className="lg:pl-64">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+          <DemoBanner />
           <Suspense
             fallback={
               <div>

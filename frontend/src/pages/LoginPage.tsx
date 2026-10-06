@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, Loader2, PlayCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,12 +9,15 @@ import { FormField } from "../components/FormField";
 import { AuthLayout } from "../components/layout/AuthLayout";
 import { Alert, AlertTitle } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
+import { usePublicConfig } from "../lib/publicConfig";
 import { loginSchema, type LoginFormValues } from "../validation";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginAsDemo } = useAuth();
   const navigate = useNavigate();
+  const config = usePublicConfig();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
   const {
     register,
     handleSubmit,
@@ -31,10 +34,43 @@ export function LoginPage() {
     }
   }
 
+  async function tryDemo() {
+    setServerError(null);
+    setDemoLoading(true);
+    try {
+      await loginAsDemo();
+      navigate("/");
+    } catch (err) {
+      setServerError(err instanceof ApiError ? err.message : "Couldn't open the demo");
+      setDemoLoading(false);
+    }
+  }
+
   return (
     <AuthLayout>
       <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
       <p className="mt-1.5 text-sm text-muted-foreground">Log in to see today's matches.</p>
+
+      {config.demo_enabled && (
+        <div className="mt-8 rounded-xl border bg-muted/40 p-4">
+          <p className="text-sm font-medium">Just looking around?</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The demo account has real postings scored by the app, a sample tracker and company briefs. No
+            sign-up needed.
+          </p>
+          <Button size="lg" className="mt-4 w-full" onClick={tryDemo} disabled={demoLoading}>
+            {demoLoading ? (
+              <>
+                <Loader2 className="animate-spin" aria-hidden /> Opening the demo…
+              </>
+            ) : (
+              <>
+                <PlayCircle aria-hidden /> Try the demo
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 flex flex-col gap-5">
         <FormField
@@ -60,7 +96,13 @@ export function LoginPage() {
           </Alert>
         )}
 
-        <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+        <Button
+          type="submit"
+          size="lg"
+          variant={config.demo_enabled ? "outline" : "default"}
+          disabled={isSubmitting}
+          className="w-full"
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="animate-spin" aria-hidden /> Logging in…
@@ -73,12 +115,14 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        No account?{" "}
-        <Link to="/register" className="font-medium text-primary hover:underline">
-          Create one
-        </Link>
-      </p>
+      {config.registration_enabled && (
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          No account?{" "}
+          <Link to="/register" className="font-medium text-primary hover:underline">
+            Create one
+          </Link>
+        </p>
+      )}
     </AuthLayout>
   );
 }

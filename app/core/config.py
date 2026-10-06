@@ -69,6 +69,19 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # --- Public deployment ---
+    # Self-serve sign-up. Turn off on a public demo so strangers can't spend
+    # the free-tier LLM quota; visitors use the demo account instead.
+    registration_enabled: bool = True
+    # Enables POST /auth/demo (one-click sign-in as a seeded demo user) and
+    # `python -m app.cli seed-demo`.
+    demo_enabled: bool = False
+    demo_email: str = "demo@researchai.local"
+    # Site-wide cap on LLM-heavy actions (company briefs + resume tailoring)
+    # per rolling 24 h, across all users. 0 = no cap. Gemini's free tier
+    # allows ~20 requests/day on the brief model and a brief takes 4.
+    llm_daily_action_limit: int = 0
+
     # --- Async job processing ---
     # Eager mode (the default: no Redis needed) runs tasks
     # synchronously in-process via .delay() — no broker needed. Set False

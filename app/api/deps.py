@@ -6,6 +6,7 @@ from app.core import security
 from app.core.db import get_db
 from app.models.user import User
 from app.repositories import user_repository as repo
+from app.services import usage_service
 
 # tokenUrl is for Swagger UI's "Authorize" button only — /auth/login itself
 # accepts JSON, not an OAuth2 form body (simpler for the React client).
@@ -32,3 +33,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_error
 
     return user
+
+
+def require_llm_budget(db: Session = Depends(get_db)) -> None:
+    """Rejects the request with 429 once the site-wide daily LLM budget is spent
+    (see app/services/usage_service.py)."""
+    try:
+        usage_service.ensure_budget(db)
+    except usage_service.DailyLimitReachedError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc

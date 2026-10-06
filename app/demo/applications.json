@@ -1,0 +1,40 @@
+[
+  {
+    "title": "Software Development Engineer Intern",
+    "company": "HackerRank",
+    "status": "interview",
+    "applied_days_ago": 12,
+    "follow_up_in_days": 2,
+    "notes": "Online assessment done. Technical round scheduled; revise DSA and the company brief."
+  },
+  {
+    "title": "Software Engineer, Intern",
+    "company": "Stripe",
+    "status": "referral_asked",
+    "applied_days_ago": 5,
+    "follow_up_in_days": 0,
+    "notes": "Messaged two alumni on the payments team using the referral helper draft."
+  },
+  {
+    "title": "Software Engineer- SaaS O365",
+    "company": "Rubrik",
+    "status": "applied",
+    "applied_days_ago": 8,
+    "follow_up_in_days": -1,
+    "notes": "Applied on the careers site with the tailored resume (backend keywords)."
+  },
+  {
+    "title": "Software Engineer, Backend (Python)",
+    "company": "Plane",
+    "status": "saved",
+    "follow_up_in_days": 3,
+    "notes": "Good Python/Django match. Contribute a small fix to the open-source repo before applying."
+  },
+  {
+    "title": "Product Engineer",
+    "company": "PostHog",
+    "status": "rejected",
+    "applied_days_ago": 20,
+    "notes": "Rejected after the take-home. Feedback: scope the project smaller next time."
+  }
+]

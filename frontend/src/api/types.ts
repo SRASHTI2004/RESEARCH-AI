@@ -37,6 +37,15 @@ export interface User {
   email: string;
   role: "user" | "admin";
   created_at: string;
+  is_demo: boolean;
+}
+
+/** GET /config — what the app needs to know before sign-in. */
+export interface PublicConfig {
+  registration_enabled: boolean;
+  demo_enabled: boolean;
+  /** null when the deployment has no daily cap. */
+  llm_actions_left_today: number | null;
 }
 
 export interface TokenResponse {

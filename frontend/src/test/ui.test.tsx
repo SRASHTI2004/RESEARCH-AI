@@ -211,6 +211,36 @@ describe("LoginPage", () => {
     expect(screen.getByRole("link", { name: "Create one" })).toHaveAttribute("href", "/register");
   });
 
+  it("offers the demo and hides sign-up on a public deployment", async () => {
+    vi.spyOn(api, "publicConfig").mockResolvedValue({
+      registration_enabled: false,
+      demo_enabled: true,
+      llm_actions_left_today: 4,
+    });
+    const demoLogin = vi.spyOn(api, "demoLogin").mockResolvedValue({
+      access_token: "a",
+      refresh_token: "r",
+      token_type: "bearer",
+    });
+    vi.spyOn(api, "me").mockResolvedValue({
+      id: "u1",
+      email: "demo@researchai.local",
+      role: "user",
+      created_at: "2026-10-06T00:00:00Z",
+      is_demo: true,
+    });
+    renderWithProviders(
+      <ThemeProvider>
+        <AuthProvider>
+          <LoginPage />
+        </AuthProvider>
+      </ThemeProvider>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Try the demo" }));
+    expect(demoLogin).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("link", { name: "Create one" })).not.toBeInTheDocument();
+  });
+
   it("shows validation errors inline", async () => {
     renderWithProviders(
       <ThemeProvider>

@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field
+
+from app.core.config import settings
 
 
 class RegisterRequest(BaseModel):
@@ -30,3 +32,8 @@ class UserOut(BaseModel):
     email: str
     role: str
     created_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_demo(self) -> bool:
+        return settings.demo_enabled and self.email == settings.demo_email
