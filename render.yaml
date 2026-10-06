@@ -8,6 +8,7 @@ services:
     name: researchai-api
     runtime: docker
     plan: free
+    region: singapore # same region as the Neon database (AWS ap-southeast-1)
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
