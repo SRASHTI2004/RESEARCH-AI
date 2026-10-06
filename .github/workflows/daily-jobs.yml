@@ -1,0 +1,63 @@
+# Keeps the public demo's job list fresh: fetch + LLM-score once a day
+# against the deployed database. Render's free plan has no cron, so this runs
+# on GitHub Actions instead.
+#
+# Needs repository secrets DATABASE_URL (Neon), GEMINI_API_KEY and
+# GROQ_API_KEY. Without DATABASE_URL every step is skipped.
+name: Daily jobs
+
+on:
+  schedule:
+    - cron: "30 3 * * *" # 09:00 IST
+  workflow_dispatch:
+
+concurrency:
+  group: daily-jobs
+  cancel-in-progress: false
+
+jobs:
+  fetch-and-score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      # The public demo scores jobs for the committed example profile.
+      PROFILE_PATH: config/profile.example.yaml
+      COMPANIES_PATH: config/companies.yaml
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL secret not set; skipping."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.enabled == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.config.outputs.enabled == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        if: steps.config.outputs.enabled == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Migrate
+        if: steps.config.outputs.enabled == 'true'
+        run: alembic upgrade head
+
+      - name: Fetch
+        if: steps.config.outputs.enabled == 'true'
+        run: python -m app.cli fetch
+
+      - name: Score
+        if: steps.config.outputs.enabled == 'true'
+        run: python -m app.cli score

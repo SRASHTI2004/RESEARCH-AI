@@ -1,5 +1,8 @@
-# Render Blueprint for the API (free plan). The database is external
-# (e.g. Neon's free Postgres) because Render's free disk is wiped on restart.
+# Render Blueprint: API (Docker) + frontend (static site), both on the free plan.
+# The database is Neon's free Postgres (Render's free disk is wiped on every
+# restart, and its free Postgres expires after 30 days).
+#
+# Values marked `sync: false` are asked for when the Blueprint is created.
 services:
   - type: web
     name: researchai-api
@@ -12,13 +15,41 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
-      - key: DATABASE_URL
+      - key: DATABASE_URL # Neon connection string (postgresql://...?sslmode=require)
         sync: false
-      - key: CORS_ORIGINS
+      - key: CORS_ORIGINS # the static site's URL, e.g. https://researchai-web.onrender.com
         sync: false
-      - key: APP_BASE_URL
+      - key: APP_BASE_URL # same URL as CORS_ORIGINS
         sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      # Public demo: no self-serve sign-up, a one-click demo account, and a
+      # site-wide cap on LLM-heavy actions so visitors can't exhaust the
+      # free-tier quota (Gemini: ~20 requests/day on the brief model; a brief is 4).
+      - key: DEMO_ENABLED
+        value: "true"
+      - key: REGISTRATION_ENABLED
+        value: "false"
+      - key: LLM_DAILY_ACTION_LIMIT
+        value: "4"
+      # The demo runs against the committed, fictional example profile and resume.
+      - key: PROFILE_PATH
+        value: config/profile.example.yaml
+      - key: MASTER_RESUME_PATH
+        value: data/master_resume.example.yaml
+
+  - type: web
+    name: researchai-web
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      # Client-side routes (/jobs/123, /tracker) all serve the SPA.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL # the API's URL, e.g. https://researchai-api.onrender.com
         sync: false
