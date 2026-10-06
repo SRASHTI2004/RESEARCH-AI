@@ -42,5 +42,11 @@ data/private/
 *.resume.pdf
 *.resume.docx
 
+# personal study notes — kept locally, never published
+docs/INTERVIEW_NOTES.md
+docs/PROGRESS.md
+docs/PROJECT_GUIDE.*
+docs/notes/
+
 # daily-run logs
 logs/

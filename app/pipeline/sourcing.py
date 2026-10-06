@@ -2,8 +2,7 @@
 
 This is what makes the Researcher stage retrieval-grounded instead of just
 asking the LLM to recall facts from training data — see docs/DECISIONS.md
-for why that matters and where it still falls
-short.
+for why that matters and where it still falls short.
 """
 
 import logging

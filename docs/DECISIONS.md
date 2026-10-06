@@ -129,7 +129,7 @@ at the bottom of each phase section.
   bookkeeping errors (wrong/missing [n]) but does NOT verify that the cited
   source *actually supports* the claim's content (that would need per-claim
   NLI/entailment checking against source text, out of scope here). This
-  is called out explicitly as a limitation in the README.
+  is listed under Known limitations in the README.
 - **Tavily was not implemented** (only the `SearchProvider` interface
   exists for it) — DuckDuckGo/`ddgs` fully satisfies the free, no-key
   requirement, and adding Tavily later is a single new file in
@@ -184,9 +184,8 @@ at the bottom of each phase section.
   `test_refresh_rejects_an_access_token`.
 - **No refresh-token revocation/blacklist store.** A stolen refresh token
   is valid until it expires (7 days by default) — there's no server-side
-  way to invalidate one early (e.g. on logout or compromise). Flagged as a
-  known limitation and a concrete "what I'd add next" in
-  the README rather than building a token-denylist table for a
+  way to invalidate one early (e.g. on logout or compromise). Accepted as a
+  known limitation (a token denylist is the next step) rather than building a token-denylist table for a
   portfolio project at this scale.
 - **No self-service admin promotion endpoint exists, deliberately.** A new
   user can never become `admin` through the API — only by direct DB
@@ -291,8 +290,7 @@ at the bottom of each phase section.
 - **Polling via `refetchInterval`, not a WebSocket/SSE push channel.**
   TanStack Query's `refetchInterval` callback stops polling once
   `status` is `done`/`failed`. Simpler and sufficient at this scale; a
-  WebSocket would be the next step for true push updates, noted as a
-  "what I'd add next".
+  WebSocket would be the next step for true push updates.
 - **TS types for API responses are hand-written** (`src/api/types.ts`),
   not generated from the FastAPI OpenAPI schema. For a project this size
   the duplication is small and explicit; `openapi-typescript` codegen
@@ -749,4 +747,4 @@ their terms forbid scraping and none offers a free public jobs API.
   page shows "View company brief" when one exists and "Regenerate" as a
   secondary action. A failed brief isn't offered for viewing.
 - **Docs:** README rewritten around the Job Search Assistant (setup for
-  personal files, Telegram/Gmail, Task Scheduler, a daily routine);
+  personal files, Telegram/Gmail, Task Scheduler, a daily routine).

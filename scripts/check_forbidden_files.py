@@ -26,6 +26,10 @@ FORBIDDEN = [
     ("*resume*.docx", "resume file"),
     ("*Resume*.pdf", "resume file"),
     ("*Resume*.docx", "resume file"),
+    ("docs/INTERVIEW_NOTES.md", "personal study notes"),
+    ("docs/PROGRESS.md", "personal progress log"),
+    ("docs/PROJECT_GUIDE.*", "personal learning guide"),
+    ("docs/notes/*", "personal study notes"),
     ("*.pem", "private key"),
     ("*.key", "private key"),
 ]

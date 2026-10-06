@@ -24,6 +24,10 @@ _spec.loader.exec_module(check)
         "My_Resume.pdf",
         "exports/resume-tailored.docx",
         "data\\private\\master_resume.yaml",
+        "docs/INTERVIEW_NOTES.md",
+        "docs/PROGRESS.md",
+        "docs/PROJECT_GUIDE.html",
+        "docs/notes/week1.md",
     ],
 )
 def test_forbidden_paths_are_caught(path):
@@ -39,6 +43,7 @@ def test_forbidden_paths_are_caught(path):
         "data/master_resume.example.yaml",
         "config/companies.yaml",
         "app/services/resume_service.py",
+        "docs/DECISIONS.md",
     ],
 )
 def test_allowed_paths_pass(path):

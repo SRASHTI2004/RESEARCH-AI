@@ -8,8 +8,7 @@ cited **Company Research Brief** for any job's company.
 
 It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a message for you.
 
-See [`docs/DECISIONS.md`](docs/DECISIONS.md) for the phase-by-phase engineering log,
-
+See [`docs/DECISIONS.md`](docs/DECISIONS.md) for the phase-by-phase engineering log.
 
 ![Jobs list: daily matches scored against your profile](docs/screenshots/jobs.png)
 
