@@ -24,13 +24,13 @@ jobs:
         run: python scripts/check_forbidden_files.py
 
       - name: Lint (ruff)
-        run: ruff check app tests scripts
+        run: ruff check app tests scripts evaluation
 
       - name: Format check (ruff)
-        run: ruff format --check app tests scripts
+        run: ruff format --check app tests scripts evaluation
 
       - name: Type check (mypy)
-        run: mypy app tests
+        run: mypy app tests evaluation
 
       - name: Test (pytest)
         env:

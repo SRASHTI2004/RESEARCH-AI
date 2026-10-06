@@ -1,0 +1,392 @@
+{
+  "generated_at": "2026-10-06T16:28:06+00:00",
+  "dataset": {
+    "postings": 126,
+    "labelled": 120
+  },
+  "filter": {
+    "labelled": 120,
+    "relevant": 11,
+    "passed": 34,
+    "confusion": {
+      "tp": 9,
+      "fp": 25,
+      "fn": 2,
+      "tn": 84
+    },
+    "recall_pct": 81.8,
+    "precision_pct": 26.5,
+    "rejected_pct": 71.7,
+    "missed_relevant": [
+      {
+        "id": "j022",
+        "title": "Software Development Intern — Cloud & DevOps (AWS)",
+        "reason": "remote but restricted to: United States"
+      },
+      {
+        "id": "j025",
+        "title": "Junior+ Full Stack Developer (React & Node.js)",
+        "reason": "remote but restricted to: United States"
+      }
+    ]
+  },
+  "red_flags": {
+    "postings": 126,
+    "flagged": 2,
+    "flagged_pct": 1.6,
+    "items": [
+      {
+        "id": "j020",
+        "title": "Product Manager Intern",
+        "company": "Aircall",
+        "flags": [
+          "Mentions Telegram/WhatsApp contact — verify the recruiter on the company's own site"
+        ]
+      },
+      {
+        "id": "j023",
+        "title": "Software Development/Engineer Intern - Summer 2027",
+        "company": "CACI International Inc",
+        "flags": [
+          "Mentions Telegram/WhatsApp contact — verify the recruiter on the company's own site"
+        ]
+      }
+    ]
+  },
+  "llm_scoring": {
+    "runs": 3,
+    "model": "gemini-flash-lite-latest",
+    "per_run": [
+      {
+        "scored": 34,
+        "of_candidates": 34,
+        "auc": 0.869,
+        "precision_at_50_pct": 75.0,
+        "recall_at_50_pct": 66.7,
+        "digest_size": 10,
+        "digest_relevant": 6,
+        "digest_precision_pct": 60.0,
+        "end_to_end_recall_pct": 54.5,
+        "seconds": 51.3
+      },
+      {
+        "scored": 34,
+        "of_candidates": 34,
+        "auc": 0.86,
+        "precision_at_50_pct": 50.0,
+        "recall_at_50_pct": 33.3,
+        "digest_size": 9,
+        "digest_relevant": 6,
+        "digest_precision_pct": 66.7,
+        "end_to_end_recall_pct": 54.5,
+        "seconds": 49.7
+      },
+      {
+        "scored": 34,
+        "of_candidates": 34,
+        "auc": 0.829,
+        "precision_at_50_pct": 80.0,
+        "recall_at_50_pct": 44.4,
+        "digest_size": 10,
+        "digest_relevant": 7,
+        "digest_precision_pct": 70.0,
+        "end_to_end_recall_pct": 63.6,
+        "seconds": 50.2
+      }
+    ],
+    "auc": {
+      "mean": 0.853,
+      "min": 0.829,
+      "max": 0.869
+    },
+    "precision_at_50_pct": {
+      "mean": 68.333,
+      "min": 50.0,
+      "max": 80.0
+    },
+    "digest_precision_pct": {
+      "mean": 65.567,
+      "min": 60.0,
+      "max": 70.0
+    },
+    "end_to_end_recall_pct": {
+      "mean": 57.533,
+      "min": 54.5,
+      "max": 63.6
+    },
+    "last_run_scores": [
+      {
+        "id": "j001",
+        "title": "Software Developer Security Analytics",
+        "label": 0,
+        "score": 10,
+        "fresher_friendly": false,
+        "reason": "Requires residency or location within Germany for monthly in-person collaboration in Berlin, which does not match the candidate's location."
+      },
+      {
+        "id": "j002",
+        "title": "Software engineer",
+        "label": 1,
+        "score": 50,
+        "fresher_friendly": false,
+        "reason": "Requires an exceptional full-stack software engineer with AI tool experience, but the candidate is a fresher looking for entry-level roles."
+      },
+      {
+        "id": "j004",
+        "title": "Consultant Implementation Engineer",
+        "label": 0,
+        "score": 10,
+        "fresher_friendly": false,
+        "reason": "Location restricted to the US or Canada, whereas the candidate is located in India."
+      },
+      {
+        "id": "j005",
+        "title": "Software Engineer - Developer Experience",
+        "label": 1,
+        "score": 10,
+        "fresher_friendly": false,
+        "reason": "Requires 1+ years of experience on large-scale distributed systems and cloud platforms, exceeding the candidate's fresher profile."
+      },
+      {
+        "id": "j008",
+        "title": "AI agent engineer",
+        "label": 1,
+        "score": 40,
+        "fresher_friendly": false,
+        "reason": "Requires experience building autonomous AI agents, which does not match the candidate's Python, FastAPI, and React tech stack."
+      },
+      {
+        "id": "j009",
+        "title": "Analytics Engineer, Data",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": false,
+        "reason": "Focuses on data engineering and pipelines, whereas the candidate specializes in full-stack development with Python, React, and TypeScript."
+      },
+      {
+        "id": "j010",
+        "title": "DESARROLLADOR FULL STACK",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": false,
+        "reason": "Requires solid full-stack experience with Python, Angular, and Go, plus remote work specifically from LATAM."
+      },
+      {
+        "id": "j011",
+        "title": "Platform and Integration Engineer Security Telemetry",
+        "label": 0,
+        "score": 10,
+        "fresher_friendly": false,
+        "reason": "Requires residency within Germany with monthly in-person collaboration in Berlin, which conflicts with the candidate's location in India."
+      },
+      {
+        "id": "j012",
+        "title": "Software Engineer / AI Code Trainer (Python, Web, Full Stack)",
+        "label": 0,
+        "score": 90,
+        "fresher_friendly": true,
+        "reason": "Matches the candidate's Python, JavaScript, TypeScript, and React skills, accepts applicants from India, and welcomes full-stack developers."
+      },
+      {
+        "id": "j013",
+        "title": "Web Developer (Fresh graduate welcome, WFH policy, on-job-training)",
+        "label": 0,
+        "score": 45,
+        "fresher_friendly": true,
+        "reason": "Welcomes fresh graduates and offers remote work, but requires strong knowledge in PHP, WordPress, and MySQL, which are not listed in the candidate's profile."
+      },
+      {
+        "id": "j062",
+        "title": "Software Engineer, Backend (Python)",
+        "label": 1,
+        "score": 35,
+        "fresher_friendly": false,
+        "reason": "Requires production experience shipping Python and familiarity with Django, which does not match a fresher profile."
+      },
+      {
+        "id": "j063",
+        "title": "AI Platform Engineer",
+        "label": 0,
+        "score": 25,
+        "fresher_friendly": false,
+        "reason": "Requires advanced AI platform engineering experience that goes beyond a fresher profile."
+      },
+      {
+        "id": "j064",
+        "title": "Multigres Engineer",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": false,
+        "reason": "Requires deep technical expertise in distributed databases and Postgres internals."
+      },
+      {
+        "id": "j065",
+        "title": "Multigres Deployment Engineer",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": false,
+        "reason": "Requires strong systems programming skills in Go and production-grade operator experience."
+      },
+      {
+        "id": "j066",
+        "title": "Software Engineer - Auth",
+        "label": 0,
+        "score": 15,
+        "fresher_friendly": false,
+        "reason": "Requires a hard minimum of 4+ years of professional experience writing and shipping Go."
+      },
+      {
+        "id": "j067",
+        "title": "Supalite Engineer",
+        "label": 0,
+        "score": 45,
+        "fresher_friendly": false,
+        "reason": "Involves TypeScript and client libraries, but requires autonomous development of core stack components beyond typical fresher scope."
+      },
+      {
+        "id": "j068",
+        "title": "Performance Engineer - Performance Analysis & Tuning",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": false,
+        "reason": "Requires experienced performance engineers for enterprise-grade query and infrastructure tuning."
+      },
+      {
+        "id": "j069",
+        "title": "Performance Engineer - Benchmarking",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": false,
+        "reason": "Requires experienced performance engineers to build benchmarking systems."
+      },
+      {
+        "id": "j070",
+        "title": "Platform Security Engineer (AMER/APAC)",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": false,
+        "reason": "Requires senior-level experience in platform, cloud, and infrastructure security."
+      },
+      {
+        "id": "j071",
+        "title": "FinOps Engineer",
+        "label": 0,
+        "score": 30,
+        "fresher_friendly": false,
+        "reason": "Requires professional FinOps and cloud financial governance experience across AWS and GCP footprints."
+      },
+      {
+        "id": "j072",
+        "title": "ClickHouse Operations Engineer",
+        "label": 0,
+        "score": 35,
+        "fresher_friendly": true,
+        "reason": "Location is remote globally, but posting gives no clear experience requirements or tech stack details for this operations role."
+      },
+      {
+        "id": "j073",
+        "title": "Product Engineer",
+        "label": 1,
+        "score": 40,
+        "fresher_friendly": true,
+        "reason": "General product engineer role with no listed requirements or tech stack details provided in the posting."
+      },
+      {
+        "id": "j074",
+        "title": "Forward Deployed Engineer",
+        "label": 1,
+        "score": 45,
+        "fresher_friendly": true,
+        "reason": "Hybrid in Bengaluru matches location, but the role requires customer-facing technical execution rather than pure software development."
+      },
+      {
+        "id": "j075",
+        "title": "Software Development Engineer Intern",
+        "label": 1,
+        "score": 85,
+        "fresher_friendly": true,
+        "reason": "Matches target role as a software development intern in Bangalore for a 2026/2027 graduation timeline."
+      },
+      {
+        "id": "j076",
+        "title": "Intermediate Backend Engineer - Database Change Management",
+        "label": 0,
+        "score": 30,
+        "fresher_friendly": false,
+        "reason": "Intermediate backend role requiring experience with Ruby on Rails, which is outside the candidate's primary Python stack."
+      },
+      {
+        "id": "j077",
+        "title": "Intermediate Backend Engineer, India",
+        "label": 0,
+        "score": 30,
+        "fresher_friendly": false,
+        "reason": "Intermediate backend role requiring experienced engineers to work with minimal guidance."
+      },
+      {
+        "id": "j078",
+        "title": "Professional Services Engineer - West",
+        "label": 0,
+        "score": 25,
+        "fresher_friendly": false,
+        "reason": "Professional Services Engineer requires advanced technical design and consulting expertise beyond a fresher profile."
+      },
+      {
+        "id": "j079",
+        "title": "Cloud Operations Engineer",
+        "label": 0,
+        "score": 10,
+        "fresher_friendly": false,
+        "reason": "Strict hard requirement of at least 8 years of DevOps or Cloud Operations experience, making it a poor fit for a fresher."
+      },
+      {
+        "id": "j080",
+        "title": "Software Engineer (CPD) - Winter Intern",
+        "label": 0,
+        "score": 20,
+        "fresher_friendly": true,
+        "reason": "Requires graduation year of 2027 and specific circuit branches, whereas the candidate graduates in 2026 with a CS degree."
+      },
+      {
+        "id": "j081",
+        "title": "Software Engineer - IAM",
+        "label": 0,
+        "score": 25,
+        "fresher_friendly": false,
+        "reason": "Requires a highly skilled Golang developer with deep practical experience in identity protocols and applied cryptography."
+      },
+      {
+        "id": "j082",
+        "title": "Software Engineer- SaaS O365",
+        "label": 1,
+        "score": 65,
+        "fresher_friendly": true,
+        "reason": "Fits the 0-2 years experience requirement and matches computer science education, though specific tech stack overlap is unspecified."
+      },
+      {
+        "id": "j083",
+        "title": "Software Engineer - Winter Intern",
+        "label": 0,
+        "score": 15,
+        "fresher_friendly": false,
+        "reason": "Hard restriction for 2027 graduates of circuital branches only; candidate is a 2026 CS graduate."
+      },
+      {
+        "id": "j084",
+        "title": "Software Engineer, Intern",
+        "label": 1,
+        "score": 75,
+        "fresher_friendly": true,
+        "reason": "Matches computer science degree requirement and accepts programming experience through side projects for an intern role."
+      },
+      {
+        "id": "j085",
+        "title": "Security Engineer Intern",
+        "label": 0,
+        "score": 25,
+        "fresher_friendly": true,
+        "reason": "Role requires a Security Engineer intern profile focused on application security, which does not match candidate's full-stack profile."
+      }
+    ]
+  }
+}

@@ -4,9 +4,9 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
-        files: ^(app|tests)/
+        files: ^(app|tests|evaluation)/
       - id: ruff-format
-        files: ^(app|tests)/
+        files: ^(app|tests|evaluation)/
 
   # `language: system` — runs via whatever `mypy`/`npm` is on PATH, so the
   # project's venv must be active (not an isolated pre-commit mirror env).
@@ -23,10 +23,10 @@ repos:
 
       - id: mypy
         name: mypy
-        entry: mypy app tests
+        entry: mypy app tests evaluation
         language: system
         pass_filenames: false
-        files: ^(app|tests)/.*\.py$
+        files: ^(app|tests|evaluation)/.*\.py$
 
       - id: frontend-lint
         name: frontend eslint + format check
