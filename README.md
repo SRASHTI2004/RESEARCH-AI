@@ -1,275 +1,226 @@
-# ResearchAI — Job Search Assistant + Company Research Briefs
+# ResearchAI
 
-A personal job-search assistant for a fresher full-stack developer. Every day it pulls new postings
-from **legal, free job APIs**, filters and scores them against your profile, flags possible scams, and
-sends you the top matches on **Telegram and email**. In the web app you track applications, get help
-asking for referrals, tailor your resume to a posting (without inventing anything), and generate a
-cited **Company Research Brief** for any job's company.
+A job-search assistant for a fresher software developer. Every day it pulls new postings from free,
+public job APIs, filters them with cheap rules, has an LLM score the survivors against your profile,
+and sends the best matches to Telegram and email. The web app tracks your applications, helps you ask
+for referrals, tailors your resume to a posting without inventing anything, and writes a cited
+research brief on any company.
 
-It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a message for you.
+It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a message on your behalf.
 
-See [`docs/DECISIONS.md`](docs/DECISIONS.md) for the phase-by-phase engineering log.
+**Live demo:** <!-- LIVE_URL --> (click **Try the demo**; no sign-up). The free hosting sleeps when
+idle, so the first load can take a minute or two.
 
-![Jobs list: daily matches scored against your profile](docs/screenshots/jobs.png)
+![Jobs page: matches scored against the profile, with the model's one-line reason](docs/screenshots/jobs.png)
 
 ## What it does
 
-| Feature | Where | How |
-|---|---|---|
-| **Job sourcing** | `app/core/jobsources/` | Greenhouse, Lever and Ashby public board APIs for the companies in `config/companies.yaml`, plus Remotive, Remote OK, We Work Remotely (RSS), Himalayas, Arbeitnow and Adzuna India (optional key). Each source's API and terms were checked before use — see `docs/DECISIONS.md`. Jobs are normalized, deduped (official boards win over aggregators) and stored with `first_seen_at` / `last_seen_at`. |
-| **Rule pre-filter** | `app/services/job_filter.py` | Cheap and free: drops senior/lead/"5+ years"/level-2+ titles, non-dev roles, and locations outside India or global remote. Biased towards keeping a job when unsure. |
-| **LLM scoring** | `app/services/scoring_service.py` | Only the rule-ranked top ~30 per run are scored 0–100 against `config/profile.yaml`, with a one-line reason and a *fresher-friendly?* flag. Gemini → Groq fallback, paced for free-tier limits. |
-| **Genuineness flags** | `app/services/genuineness.py` | Fees, Telegram/WhatsApp-only contact, personal email domains, unrealistic pay, vague company… shown as "check this", never as a verdict. |
-| **Daily digest** | `app/services/digest_service.py` | Top 10 new matches to **Telegram** and an **HTML email** (Gmail SMTP). The channels are independent: one failing never stops the other or the run. Includes due tracker follow-ups. |
-| **Application tracker** | `/tracker` | saved → applied → referral asked → interview → rejected / offer, with notes, follow-up dates, filters and counts. |
-| **Referral helper** | job page | LinkedIn search strings (alumni / team / recruiters) to paste yourself, a where-to-look checklist, and message drafts. No LinkedIn automation. |
-| **Resume tailoring** | job page | Reorders and rewords your real master resume for the posting. A validator rejects any rewrite that adds numbers, tools or names. Shows a diff; exports ATS-friendly PDF/DOCX. |
-| **Company brief** | job page / `/briefs/new` | The original multi-agent research pipeline (below), one click from any job. Existing briefs are reused. |
+- **Job sourcing.** Greenhouse, Lever and Ashby board APIs for the companies in
+  `config/companies.yaml`, plus Remotive, Remote OK, We Work Remotely (RSS), Himalayas, Arbeitnow
+  and Adzuna India (optional key). I checked each source's API terms before using it. Postings are
+  normalised and de-duplicated, and an official board wins over an aggregator copy.
+- **Rule filter** (`app/services/job_filter.py`). Free and fast. It drops senior and level-2+ titles,
+  non-development roles, postings asking for more experience than the profile allows, and locations
+  outside India or worldwide remote. When unsure, it keeps the job.
+- **LLM scoring** (`app/services/scoring_service.py`). Only the rule-ranked top ~30 per run are sent
+  to the model, in batches, paced for free-tier limits. Each job gets a 0–100 fit score, a one-line
+  reason and a "fresher-friendly" flag. Gemini is the primary model, with Groq as fallback.
+- **Red flags** (`app/services/genuineness.py`). Fees, Telegram/WhatsApp-only contact, personal
+  email domains, unrealistic pay. These are shown as "check this", never as a verdict.
+- **Daily digest.** The top 10 new matches go to Telegram and an HTML email. The two channels are
+  independent, so one failing doesn't stop the other.
+- **Application tracker.** Statuses run saved → applied → referral asked → interview →
+  rejected/offer, with notes and follow-up reminders.
+- **Referral helper.** LinkedIn search strings to paste yourself, a where-to-look checklist and message
+  drafts. There is no LinkedIn automation.
+- **Resume tailoring.** Reorders and rewords your real master resume for one posting. A validator
+  rejects any rewrite that introduces a number, tool or name that isn't in the original. You get a
+  diff and an ATS-friendly PDF/DOCX.
+- **Company research brief.** A four-stage LangGraph pipeline: Researcher (web search and page
+  extraction, numbered citations), Analyzer, Writer, then a Reviewer that lists uncited claims. Each
+  stage is saved as it finishes, so the UI shows progress.
 
-### The Company Research Brief pipeline
-
-Four LangGraph stages, each persisted as it completes so the UI shows live progress:
-
-1. **Researcher** — searches the web (DuckDuckGo), extracts page content, writes notes with numbered
-   citations (`[1]`, `[2]`, …) on every claim.
-2. **Analyzer** — organizes them into Company Overview, Recent News, Tech Stack, Interview Prep
-   Questions.
-3. **Writer** — produces the final brief plus a Sources section.
-4. **Reviewer** — flags any claim with a missing or invalid citation.
-
-## Architecture
+## How it fits together
 
 ```mermaid
-flowchart TB
-    subgraph Client
-        FE["React + TypeScript SPA<br/>Jobs · Tracker · Briefs"]
-        TG["Telegram"]
-        MAIL["Email (Gmail SMTP)"]
+flowchart LR
+    subgraph Daily["Daily run (Task Scheduler locally, GitHub Actions for the demo)"]
+        Fetch["fetch + dedupe"] --> Filter["rule filter + red flags"] --> Score["LLM score top ~30"] --> Digest["digest: Telegram + email"]
     end
-
-    subgraph Daily["Daily job (Windows Task Scheduler → python -m app.cli run-daily)"]
-        Fetch["fetch: job sources → normalize → dedupe → pre-filter → red flags"]
-        Score["score: top ~30 → LLM 0-100 + reason"]
-        Digest["digest: top 10 new → each channel independently"]
-    end
-
-    subgraph API["FastAPI (app/)"]
-        Routers["Routers<br/>auth · jobs · applications · resumes · research · health"]
-        Services["Services<br/>filter · scoring · digest · referral · resume_tailor · research"]
-        Repos["Repositories"]
-    end
-
-    subgraph Worker["Celery task (eager in-process by default)"]
-        Pipeline["LangGraph: Researcher → Analyzer → Writer → Reviewer"]
-    end
-
-    DB[("SQLite (default) or PostgreSQL")]
-    Sources["Job APIs<br/>Greenhouse · Lever · Ashby · Remotive · Remote OK<br/>WWR RSS · Himalayas · Arbeitnow · Adzuna"]
-    LLM["LLM providers<br/>Gemini → Groq → Ollama"]
-    Search["DuckDuckGo + page fetch"]
-
-    FE -->|"REST + JWT"| Routers --> Services --> Repos --> DB
-    Services --> Worker
-    Pipeline --> LLM
-    Pipeline --> Search
-    Fetch --> Sources
-    Score --> LLM
+    Sources["Job board APIs"] --> Fetch
+    Score --> LLM["Gemini → Groq"]
+    UI["React + TypeScript"] -->|"REST + JWT"| API["FastAPI: routers → services → repositories"]
+    API --> DB[("PostgreSQL / SQLite")]
     Fetch & Score & Digest --> DB
-    Digest --> TG
-    Digest --> MAIL
-    Services -->|tailor| LLM
+    API --> Brief["LangGraph brief: Researcher → Analyzer → Writer → Reviewer"]
+    Brief --> LLM
+    Brief --> Web["DuckDuckGo + page fetch"]
 ```
 
-Everything runs on a Windows laptop with 8 GB RAM and **no Docker**: SQLite by default, Celery in eager
-(in-process) mode, and Windows Task Scheduler for the daily run. Docker Compose (Postgres, Redis, a real
-worker, MinIO) is still there for anyone who has Docker.
+The backend is layered: routers handle HTTP only, services hold the logic, and repositories own the
+queries. Settings come from environment variables (`app/core/config.py`). The same code runs on SQLite
+locally and on Postgres in production, with only `DATABASE_URL` changing. Briefs run through a Celery
+task, in-process by default, or on a real worker with Redis via `docker compose`.
 
-## Tech stack
+## Evaluation
 
-| Layer | Choice | Why |
+`python -m evaluation.run` measures each stage against a hand-labelled test set: 120 real postings
+fetched by the app on 2026-10-06 and labelled against the public example profile (fresher full-stack
+developer, Python/React, India or worldwide remote). The set is **enriched for hard cases**: every
+posting the filter kept, plus its near-misses. Relevant postings are well under 1% of what the
+sources return, so a random sample would contain almost none. With only 11 relevant postings, each
+one moves recall by about 9 points, so treat these numbers as rough. The labelling rubric and
+sampling are described in [`evaluation/README.md`](evaluation/README.md); raw results are in
+[`evaluation/results/latest.json`](evaluation/results/latest.json).
+
+| Stage | Metric | Result |
 |---|---|---|
-| Backend | FastAPI, Pydantic v2 | typed contracts, free OpenAPI docs |
-| Database | SQLAlchemy 2.0 + Alembic; SQLite or PostgreSQL | versioned migrations; switch by `DATABASE_URL` only |
-| Auth | JWT (access + refresh) + bcrypt | stateless; per-user tracker, resumes and briefs |
-| AI | LangGraph pipeline; provider-agnostic LLM layer (Gemini → Groq → Ollama) | free-tier friendly with automatic fallback |
-| Jobs | public ATS + remote-job APIs via `requests`; RSS via `defusedxml` | legal, free, no scraping; safe XML parsing |
-| Notifications | Telegram Bot API, `smtplib` (Gmail App Password) | free; secrets redacted from logs |
-| Documents | `fpdf2` (PDF), `python-docx` (DOCX) | ATS-friendly single-column resumes |
-| Frontend | React 19 + TypeScript, Vite, TanStack Query, React Router, React Hook Form + Zod | typed end to end |
-| UI | Tailwind CSS v4, shadcn/ui-style components (Radix primitives, CVA), lucide icons, Sonner toasts, `react-markdown` + GFM | one token-based design system; light/dark/system themes; LLM output rendered as Markdown with clickable citation chips |
-| Quality | ruff, mypy, ESLint, Prettier, pytest, Vitest, forbidden-files check | in CI and pre-commit |
+| Rule filter | recall (relevant postings kept) | 81.8% (9 of 11) |
+| Rule filter | precision (kept postings that are relevant) | 26.5% (9 of 34) |
+| Rule filter | postings rejected before any LLM call (all 3,702 fetched that day) | 98.9% |
+| LLM scorer | AUC on filter survivors, 3 runs | 0.85 (0.83–0.87) |
+| LLM scorer | precision of jobs scored 50 or more | 68% (50–80%) |
+| Digest | relevant jobs in the top 10 | 66% (60–70%) |
+| Digest | share of all relevant jobs that reach the top 10 | 58% (55–64%) |
+| Red flags | false alarms on 126 legitimate postings | 2 (1.6%) |
+
+LLM scoring used `gemini-flash-lite-latest` at temperature 0.1. Ranges show the spread across 3
+repeated runs.
+
+What the numbers say:
+
+- **The filter is tuned for recall, and pays in precision on purpose.** It removes ~99% of fetched
+  postings for free, so the rate-limited LLM only sees a few dozen a day.
+- **Both filter misses had a location field ("United States") that contradicted the description**
+  ("India-based", "work from anywhere"). The filter trusts the structured field.
+- **The LLM ranks well, but the digest still misses ~40% of relevant jobs.** Two misses come from the
+  filter. The rest are relevant jobs the model read as too demanding for a fresher: "you have shipped
+  Python to production" scored 35, "1+ years on distributed systems" scored 15. Some also fell off a
+  tie at the score-40 cut-off.
+- **The scorer caught a labelling mistake.** It flagged a "2027 graduates only" restriction that I
+  had missed in two postings. I verified this against the text and corrected the labels.
+- **Red flags can only be judged for false alarms here.** None of the postings in the set is a scam,
+  so the set can't measure how many real scams the flags catch.
+
+<!-- BRIEF_EVAL -->
+
+## Running it locally
+
+Prerequisites: Python 3.12 and Node.js 20+. The commands are for Windows PowerShell.
+
+```powershell
+# backend
+python -m venv venv; venv\Scripts\activate
+pip install -r requirements-dev.txt
+copy .env.example .env      # then set SECRET_KEY, GEMINI_API_KEY (free), GROQ_API_KEY (free)
+alembic upgrade head
+uvicorn app.main:app --reload               # API docs at http://127.0.0.1:8000/docs
+
+# frontend (second terminal)
+cd frontend; npm install; copy .env.example .env
+npm run dev                                 # http://localhost:5173
+```
+
+Generate a `SECRET_KEY` with `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Free keys:
+Gemini at https://aistudio.google.com/apikey and Groq at https://console.groq.com.
+
+Your personal files are git-ignored, and `scripts/check_forbidden_files.py` blocks them in pre-commit
+and CI:
+
+| File | Copy from | Contents |
+|---|---|---|
+| `.env` | `.env.example` | secrets and settings |
+| `config/profile.yaml` | `config/profile.example.yaml` | skills, target roles, cities (used by the filter, scorer and referral helper) |
+| `data/private/master_resume.yaml` | `data/master_resume.example.yaml` | your real experience; the tailor can only reorder and reword it |
+
+Daily use:
+
+```powershell
+python -m app.cli run-daily       # fetch -> score -> digest
+python -m app.cli test-digest     # sends a sample digest to each configured channel
+powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1   # schedule 09:00 daily
+```
+
+For the digest, set `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (create a bot with @BotFather) and/or
+Gmail SMTP with an App Password in `.env`. Each setting is commented in `.env.example`.
+
+## Deployment
+
+The public demo runs entirely on free plans, none of which needs a payment card:
+
+- **Render**: the API as a Docker web service and the frontend as a static site, both defined in
+  [`render.yaml`](render.yaml).
+- **Neon**: Postgres. Render's free disk is wiped on restart, and its free Postgres expires after 30
+  days.
+- **GitHub Actions**: the daily fetch and score ([`daily-jobs.yml`](.github/workflows/daily-jobs.yml)),
+  because Render's free plan has no cron.
+
+Three settings keep a shared free-tier LLM quota from running out:
+
+- `REGISTRATION_ENABLED=false`: no self-serve sign-up.
+- `DEMO_ENABLED=true`: one-click demo account. Its data resets on every start (`python -m app.cli seed-demo`).
+- `LLM_DAILY_ACTION_LIMIT=4`: company briefs plus LLM resume tailoring, per 24 hours across all visitors.
+
+Memory, measured in the production image under Render's free-plan limits (512 MB, 0.1 CPU,
+Postgres 16): 148 MB idle, and 170 MB peak during resume tailoring, PDF/DOCX export and a brief run.
+Cold start is about 100 seconds at 0.1 CPU.
+
+## Tests and checks
+
+```powershell
+pytest                                     # 252 tests; every external API, LLM, Telegram and SMTP call is mocked
+ruff check app tests scripts evaluation; mypy app tests evaluation
+cd frontend; npm run test; npm run lint; npm run build    # 61 tests
+```
+
+CI runs all of these on every push, plus the forbidden-files check.
+
+## Known limitations
+
+- **Free-tier LLM quotas shape everything.** A brief takes four LLM calls. Gemini's free tier allows
+  about 20 calls a day on the brief model, and Groq's 8,000 tokens/minute is too small for the
+  Researcher prompt. So the demo caps AI actions at 4 per day, and briefs fail once Gemini's daily
+  quota is gone.
+- **Only sources with a public API.** Many Indian companies post only on LinkedIn or Naukri, which
+  this deliberately doesn't touch.
+- **Known filter misses** (from the evaluation):
+  - It takes the smallest "N years" figure in a posting, so "4+ years of Go … 2+ years on auth"
+    passes.
+  - It misses "(at least 8 years)" when "experience" comes before the number.
+  - It trusts the structured location field even when the description contradicts it.
+
+  The LLM scorer catches the first two, scoring those jobs 20 and 10.
+- **Scores and red flags are heuristics.** Always check the company's own site.
+- **Citation checks are structural.** They confirm that each claim has a `[n]` pointing at a real
+  source, not that the source supports the claim.
+- **The digest is single-user.** It goes to whoever runs the install. The demo has no digest.
+- **Not verified end to end:** real Telegram/Gmail delivery (needs personal credentials), and the
+  MinIO export path in `docker compose`.
 
 ## Project structure
 
 ```
 app/
-  api/routers/      auth · jobs (+ /referral, /brief) · applications · resumes · research · health
-  core/             config, security, llm, search, jobsources/, notify, profile, resume, storage
-  models/           users, research jobs, jobs, source runs, applications, tailored resumes
-  pipeline/         LangGraph research agents
-  repositories/     DB access
-  schemas/          Pydantic request/response models
-  services/         filter, genuineness, ingest, scoring, digest, daily, referral, resume_*, research
-  worker/           Celery app + research task
-  cli.py            python -m app.cli fetch | refilter | sources | score | digest | test-digest | run-daily
-config/
-  companies.yaml            ATS watchlist (committed — edit freely)
-  profile.example.yaml      copy to profile.yaml (git-ignored)
-data/
-  master_resume.example.yaml  copy to private/master_resume.yaml (git-ignored)
-scripts/
-  run_daily.ps1, register_daily_task.ps1   Windows Task Scheduler
-  check_forbidden_files.py                 blocks .env / profile / resume / *.db from commits
-frontend/src/
-  pages/            Jobs, JobDetail, Tracker, NewBrief, Brief, History, Login (landing), Register
-  components/       JobBadges, ApplicationEditor, ReferralPanel, ResumePanel, BriefPanel, Markdown, …
-  components/ui/    shadcn/ui-style primitives (Button, Card, Badge, Input, Select, Skeleton, …)
-  components/layout AppShell (sidebar + mobile drawer), PageHeader, AuthLayout
-  theme/            light/dark/system theme provider + toaster
-  index.css         design tokens (colors, radii, fonts) for both themes
-tests/              pytest (236 tests) — every external API, LLM, Telegram and SMTP call mocked
+  api/routers/     auth, jobs (+ referral, brief), applications, resumes, research, health
+  core/            config, security, llm/, search, jobsources/, notify, profile, resume, storage
+  services/        filter, genuineness, ingest, scoring, digest, daily, referral, resume_*, research,
+                   demo, usage
+  repositories/    database access
+  pipeline/        LangGraph research agents
+  worker/          Celery app + research task
+  demo/            demo-account fixtures (real postings, sample tracker)
+  cli.py           fetch | refilter | sources | score | digest | test-digest | run-daily | seed-demo
+evaluation/        test set, labelling rubric, evaluation script and results
+frontend/src/      pages, components (shadcn/ui-style), API client, auth, theme
+docs/DECISIONS.md  why each technical choice was made, phase by phase
 ```
-
-## Setup (Windows, no Docker)
-
-Prerequisites: Python 3.12, Node.js 20+.
-
-### 1. Backend
-
-```powershell
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements-dev.txt
-
-copy .env.example .env
-# Generate a SECRET_KEY and paste it into .env:
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-
-alembic upgrade head
-uvicorn app.main:app --reload       # API docs: http://127.0.0.1:8000/docs
-```
-
-### 2. Frontend
-
-```powershell
-cd frontend
-npm install
-copy .env.example .env               # defaults to http://127.0.0.1:8000
-npm run dev                          # http://localhost:5173 — register an account, then log in
-```
-
-### 3. Your personal files (never committed)
-
-| File | From | What to put in it |
-|---|---|---|
-| `.env` | `.env.example` | `SECRET_KEY`, `GEMINI_API_KEY` (free: https://aistudio.google.com/apikey), `GROQ_API_KEY` (free fallback: https://console.groq.com), optional `ADZUNA_APP_ID`/`ADZUNA_APP_KEY` (https://developer.adzuna.com) |
-| `config/profile.yaml` | `config/profile.example.yaml` | skills, target roles, cities, college (used by filter, scorer, referral helper) |
-| `data/private/master_resume.yaml` | `data/master_resume.example.yaml` | your **real** experience, projects, skills — the tailor can only reorder/reword what's here |
-
-`scripts/check_forbidden_files.py` (pre-commit + CI) refuses commits containing any of these.
-
-### 4. Daily digest setup
-
-**Telegram (free):**
-1. In Telegram, message **@BotFather** → `/newbot` → copy the token.
-2. Send your new bot any message.
-3. Open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `message.chat.id`.
-4. In `.env`: `DIGEST_TELEGRAM_ENABLED=true`, `TELEGRAM_BOT_TOKEN=…`, `TELEGRAM_CHAT_ID=…`.
-
-**Email (Gmail):**
-1. Turn on 2-Step Verification, then create an App Password at https://myaccount.google.com/apppasswords.
-2. In `.env`: `DIGEST_EMAIL_ENABLED=true`, `SMTP_USERNAME`, `SMTP_PASSWORD` (the 16-character App
-   Password, not your normal password), `DIGEST_EMAIL_FROM`, `DIGEST_EMAIL_TO`.
-
-**Check both:**
-
-```powershell
-python -m app.cli test-digest        # sends a sample digest to every configured channel, reports each
-```
-
-### 5. Run it every day
-
-```powershell
-# once, to try it by hand:
-python -m app.cli run-daily          # fetch → score → digest
-
-# schedule it (09:00 daily; runs when you next log in if the laptop was off):
-powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1
-powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1 -At 08:30   # other time
-powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1 -Remove     # undo
-```
-
-Output goes to `logs\daily-YYYY-MM.log` (git-ignored; secrets redacted). Other commands:
-`python -m app.cli fetch --force`, `refilter` (after editing your profile), `sources`, `score`, `digest`.
-
-### Daily routine
-
-1. Read the digest (Telegram or email) → open promising jobs in the app.
-2. On a job: check the red flags → **Save to tracker** → **Generate company brief** if you're serious.
-3. **Tailor resume** → review the diff → download PDF → apply on the company's site.
-4. Mark **Applied**; use the **Referral helper** to find alumni/engineers and copy a message draft.
-5. Follow-ups that fall due show up in the next digest and under **Tracker → Due**.
-
-## Tests and quality checks
-
-```powershell
-pytest                                # 236 tests; no API keys or network needed
-cd frontend; npm run test             # 60 tests
-ruff check . ; ruff format --check . ; mypy app tests
-cd frontend; npm run lint; npm run format:check; npm run build
-pre-commit run --all-files
-```
-
-## Known limitations
-
-- **Free-tier LLM limits.** Scoring is capped at ~30 jobs/run and paced; a company brief uses four LLM
-  calls. Gemini as primary avoids most of Groq's 8,000 tokens/minute limit.
-- **Sources cover what has a public API.** Many Indian companies only post on LinkedIn/Naukri, which
-  this deliberately doesn't touch. Add companies that use Greenhouse/Lever/Ashby to
-  `config/companies.yaml`.
-- **Red flags and scores are heuristics.** Always verify on the company's official site.
-- **Resume tailoring's validator is conservative.** It may reject a harmless rewrite (you keep your
-  original wording); it can't judge whether your master resume itself is accurate — that's on you.
-- **The Reviewer's citation check** confirms every claim has a valid `[n]`, not that the source truly
-  supports it.
-- **Not live-verified here:** actual Telegram/Gmail delivery (needs your credentials), Docker Compose,
-  and a click-through against a real backend (the screenshots below use the production build with a
-  mocked API). Run `test-digest` and click through the app once.
-- **Single-user design for the digest** — it goes to the one person who runs the install.
 
 ## Screenshots
 
-Production build in a real browser, with a mocked API and fictional companies.
-
-**Landing / login**: one sentence on what the app does, plus the sign-in form.
-
-![Landing and login page](docs/screenshots/login.png)
-
-**Jobs**: daily matches with fit scores, source badges, fresher-friendly flags and the AI's reason.
-
-| Light | Dark |
+| Job page: fit reason, red flags, tailored-resume diff | Application tracker |
 |---|---|
-| ![Jobs, light theme](docs/screenshots/jobs.png) | ![Jobs, dark theme](docs/screenshots/jobs-dark.png) |
+| ![Job detail](docs/screenshots/job-detail.png) | ![Tracker](docs/screenshots/tracker.png) |
 
-**Job page**: why it fits, the description, tailored-resume diff, tracker and company brief.
-
-![Job detail page](docs/screenshots/job-detail.png)
-
-**Application tracker**: status filters with counts, follow-up reminders and notes.
-
-![Application tracker](docs/screenshots/tracker.png)
-
-**Company research brief**: the LLM report rendered as Markdown; each `[n]` citation is a chip that
-opens its source.
-
-| Light | Dark |
+| Company brief with clickable citations | Mobile |
 |---|---|
-| ![Company brief, light theme](docs/screenshots/brief.png) | ![Company brief, dark theme](docs/screenshots/brief-dark.png) |
-
-**Briefs history** and **mobile** (responsive layout with a slide-out navigation drawer):
-
-![Company briefs](docs/screenshots/briefs.png)
-
-| Mobile | Mobile navigation |
-|---|---|
-| <img src="docs/screenshots/mobile-jobs.png" width="300" alt="Jobs on mobile"> | <img src="docs/screenshots/mobile-nav.png" width="300" alt="Mobile navigation drawer"> |
+| ![Company brief](docs/screenshots/brief.png) | <img src="docs/screenshots/mobile-jobs.png" width="300" alt="Jobs on mobile"> |

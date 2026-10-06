@@ -22,8 +22,8 @@ at the bottom of each phase section.
 - **`.env.example`:** added `GROQ_MODEL` alongside `GROQ_API_KEY` in
   anticipation of Phase 1's shared LLM client factory, which reads the model
   name from env instead of hardcoding it in every agent file.
-- **API key rotation:** an exposed API key was rotated
-  before this phase began.
+- **API key rotation:** an API key that had been exposed outside `.env`
+  was rotated before this phase began.
 
 ## Scope decisions carried over from planning
 
@@ -85,7 +85,7 @@ at the bottom of each phase section.
   and Google both returned 429 for some queries and it transparently used
   another backend).
 - **Content extraction:** `trafilatura.fetch_url()` returned nothing against
-  at least one real site (likely a default-UA/TLS
+  at least one real site on my machine (likely a default-UA/TLS
   quirk); switched to fetching with `requests` (custom User-Agent, explicit
   timeout) and passing the HTML string into `trafilatura.extract()`
   separately — more robust and keeps fetch timeout under our own control.
@@ -319,9 +319,8 @@ at the bottom of each phase section.
   `index.html`, and a live CORS preflight + register/login/`/auth/me`
   round-trip against the real running backend with the frontend's exact
   origin header. The data contracts (TS types vs. Pydantic schemas) match
-  by inspection. A manual click-through is still owed
-  (register → new brief → watch it progress → history) before considering
-  this phase fully done.
+  by inspection. A manual click-through (register → new brief → watch it
+  progress → history) was still owed at this point.
 
 ## Phase 7 — DevOps & quality gates
 
@@ -355,16 +354,13 @@ at the bottom of each phase section.
   explicitly (raises `TypeError` if it's ever not a string) instead of
   suppressing the mypy error — turns a latent assumption into a checked
   one.
-- **Dockerfiles/docker-compose.yml are written but NOT verified live** —
-  Docker wasn't available yet (checked again this phase;
-  still absent). Validated what's possible without it: `docker-compose.yml`
-  parses as valid YAML with the expected 5 services
-  (postgres/redis/api/worker/frontend), and the Postgres-compatible
-  schema/`DATABASE_URL`-only design from Phase 3 means the same migrations
-  that ran against SQLite here should apply unchanged against the
-  Postgres container. **Still to do: run `docker compose up --build`
-  once** to confirm — this is the single biggest unverified piece of the
-  whole rebuild.
+- **Dockerfiles/docker-compose.yml were written but not verified live at
+  this point** — I had no Docker on the machine yet. Validated what was
+  possible without it: `docker-compose.yml` parses as valid YAML with the
+  expected 5 services (postgres/redis/api/worker/frontend), and the
+  `DATABASE_URL`-only design from Phase 3 meant the same migrations should
+  apply unchanged to Postgres. (Later verified: see "Deployment" below —
+  the API image runs migrations, seeds and serves against Postgres 16.)
 - **`api`/`worker` share one Dockerfile image**, differing only by the
   `command:` override in docker-compose (`worker` runs
   `celery -A app.worker.celery_app worker` instead of the default
@@ -456,12 +452,11 @@ at the bottom of each phase section.
   `create_bucket` only on 404) — happens on first upload, not at app
   startup, so a dev who never configures storage never triggers an
   unnecessary MinIO connection attempt at all.
-- **Not live-verified** (no Docker/MinIO run yet, same
-  limitation as Phase 7) — fully covered by mocked unit tests
+- **Not live-verified** (no MinIO run yet) — covered by mocked unit tests
   (`tests/test_storage.py`, plus the worker-task integration tests) that
   exercise the real `boto3` exception types (`ClientError`) against a fake
-  client, not just stubbed-out success paths. Still to do: confirm a
-  real upload/download round-trip after `docker compose up`.
+  client, not just stubbed-out success paths. A real upload/download
+  round-trip after `docker compose up` is still to do.
 
 ---
 
@@ -748,3 +743,66 @@ their terms forbid scraping and none offers a free public jobs API.
   secondary action. A failed brief isn't offered for viewing.
 - **Docs:** README rewritten around the Job Search Assistant (setup for
   personal files, Telegram/Gmail, Task Scheduler, a daily routine).
+
+---
+
+# Evaluation
+
+- **Real postings, not synthetic ones.** The test set
+  (`evaluation/data/jobs.jsonl`) is 126 postings the app itself fetched on
+  2026-10-06, labelled against the public example profile with a written
+  rubric (`evaluation/README.md`). Synthetic postings would have measured
+  how well the filter matches my own idea of a posting, not real ones.
+- **Enriched for hard cases, and stated as such.** Relevant postings are
+  well under 1% of what the sources return, so a random sample would have
+  had almost no positives. The set holds every filter survivor plus the
+  near-misses (developer titles without seniority words, junior/intern
+  titles, India-located developer roles). Precision/recall describe
+  behaviour on hard cases, not population rates.
+- **Labels can be wrong, so the notes say why.** Each non-obvious label
+  carries a note; low-confidence calls are marked. Two labels (Rubrik
+  winter internships restricted to 2027 graduates) were corrected after the
+  LLM scorer flagged a batch restriction I had missed. I checked the
+  correction against the posting text instead of accepting the model's
+  verdict.
+- **What the eval found and I did not "fix".** The years-of-experience rule
+  takes the *smallest* number in a posting (deliberate: postings list a low
+  hard requirement plus higher nice-to-haves), so "4+ years of Go … 2+
+  years on auth systems" passes. "(at least 8 years)" with "experience"
+  before the number is also missed. Both are cheap for the LLM scorer to
+  catch (it scored them 20 and 10). Tuning the regex against 11 positives
+  would be fitting noise; they're listed as known limitations instead.
+- **Brief checks are structural.** Citation coverage and invalid-citation
+  counts are computed in code from the final report, not taken from the
+  Reviewer agent's own verdict. They can't tell whether a source supports
+  a claim.
+
+# Public deployment
+
+- **Render (free) + Neon (free) + GitHub Actions; no card anywhere.**
+  Render's free disk is wiped on restart and its free Postgres expires
+  after 30 days, so the database is Neon. Render's free plan has no cron,
+  so the daily fetch + score runs as a scheduled GitHub Actions workflow
+  against the same database.
+- **One API process, no Redis.** Celery stays in eager mode; a brief runs
+  inside the request (FastAPI runs sync endpoints in a thread pool, so
+  other requests are still served). Measured in the production image under
+  Render's limits (512 MB, 0.1 CPU, Postgres 16): 148 MB idle, 170 MB peak
+  across resume tailoring, PDF/DOCX export and a brief run. Cold start is
+  ~100 s at 0.1 CPU (migrations + demo seed + imports).
+- **Demo account instead of open sign-up.** Every visitor shares one
+  free-tier LLM quota (Gemini allows ~20 requests/day on the brief model;
+  a brief is 4). So the deployment turns registration off, offers a
+  one-click demo account (`POST /auth/demo`), and caps briefs + LLM resume
+  tailoring site-wide per rolling 24 hours (`LLM_DAILY_ACTION_LIMIT`).
+  The cap counts existing rows instead of keeping a counter, so it
+  survives Render's frequent restarts with no extra state.
+- **Demo data resets on every start.** `seed-demo` wipes the demo user's
+  tracker, briefs and tailored resumes and restores the fixtures. Sample
+  jobs are real postings from the evaluation set with their recorded LLM
+  scores, and they're marked as already digested so they can never go out
+  in a real digest. Seeded briefs keep their original timestamps so they
+  don't count against the daily cap.
+- **Only example files go into the image.** The Dockerfile copies
+  `config/profile.example.yaml` and `data/master_resume.example.yaml` by
+  name; personal profile/resume files never reach an image.
