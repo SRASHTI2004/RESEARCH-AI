@@ -260,6 +260,12 @@ frontend/src/      pages, components (shadcn/ui-style), API client, auth, theme
 docs/DECISIONS.md  why each technical choice was made, phase by phase
 ```
 
+## License
+
+Code: MIT ([LICENSE](LICENSE)). The job postings in `evaluation/data/` and `app/demo/`, and the
+web content quoted in the sample company briefs, belong to their original publishers. They are
+included unmodified for evaluation and the demo, with source URLs kept.
+
 ## Author
 
 **Srashti Choudhary** · [github.com/SRASHTI2004](https://github.com/SRASHTI2004)
