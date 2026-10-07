@@ -1,17 +1,49 @@
 # ResearchAI
 
-A job-search assistant for a fresher software developer. Every day it pulls new postings from free,
-public job APIs, filters them with cheap rules, has an LLM score the survivors against your profile,
-and sends the best matches to Telegram and email. The web app tracks your applications, helps you ask
-for referrals, tailors your resume to a posting without inventing anything, and writes a cited
-research brief on any company.
+**A job-search assistant for fresher developers: daily matches from public job APIs, scored by an LLM
+against your profile, plus an application tracker, honest resume tailoring and cited company briefs.**
+It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a message for you.
 
-It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a message on your behalf.
+**[Live demo](https://researchai-web.onrender.com)** · click *Try the demo* (the free backend may take ~1-2 min to wake up)
 
-**Live demo: https://researchai-web.onrender.com** (click **Try the demo**; no sign-up). The free hosting sleeps when
-idle, so the first load can take a minute or two.
+![CI](https://github.com/SRASHTI2004/RESEARCH-AI/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.11x-009688)
+![React](https://img.shields.io/badge/React-19%20%2B%20TS-61dafb)
+![Postgres](https://img.shields.io/badge/Postgres-16-336791)
+![LangGraph](https://img.shields.io/badge/LangGraph-multi--agent-7c3aed)
+
+Everything runs on free tiers and fits an **8 GB laptop**: rule filters before any LLM call,
+free-tier LLMs (Gemini primary, Groq fallback), and a deployment that peaks at 170 MB on
+Render's 512 MB free plan.
 
 ![Jobs page: matches scored against the profile, with the model's one-line reason](docs/screenshots/jobs.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/job-detail.png" alt="Job page with fit reason and tracker"></td>
+    <td width="50%"><img src="docs/screenshots/brief.png" alt="Company brief with clickable citations"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/tracker.png" alt="Application tracker"></td>
+    <td><img src="docs/screenshots/jobs-dark.png" alt="Jobs page in dark mode"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/login.png" alt="Landing page with the Try the demo button"></td>
+    <td><img src="docs/screenshots/briefs.png" alt="Company briefs history"></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/mobile-jobs.png" alt="Jobs on a phone" width="240">
+  &nbsp;
+  <img src="docs/screenshots/mobile-nav.png" alt="Navigation drawer on a phone" width="240">
+</p>
+
+<sub>Screenshots are taken from the live deployment, signed in as the demo account (real postings
+fetched by the app, sample tracker entries).</sub>
+
+---
 
 ## What it does
 
@@ -233,19 +265,3 @@ evaluation/        test set, labelling rubric, evaluation script and results
 frontend/src/      pages, components (shadcn/ui-style), API client, auth, theme
 docs/DECISIONS.md  why each technical choice was made, phase by phase
 ```
-
-## Screenshots
-
-Taken from the live demo (real postings, demo account).
-
-| Job page: fit reason, red flags, tailored-resume diff | Application tracker |
-|---|---|
-| ![Job detail](docs/screenshots/job-detail.png) | ![Tracker](docs/screenshots/tracker.png) |
-
-| Company brief with clickable citations | Jobs, dark theme |
-|---|---|
-| ![Company brief](docs/screenshots/brief.png) | ![Jobs, dark theme](docs/screenshots/jobs-dark.png) |
-
-| Landing page with the demo button | Mobile |
-|---|---|
-| ![Landing page](docs/screenshots/login.png) | <img src="docs/screenshots/mobile-jobs.png" width="300" alt="Jobs on mobile"> |
