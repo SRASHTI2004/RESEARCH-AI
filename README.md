@@ -8,7 +8,7 @@ research brief on any company.
 
 It never scrapes LinkedIn/Naukri/Indeed, never auto-applies, and never sends a message on your behalf.
 
-**Live demo:** <!-- LIVE_URL --> (click **Try the demo**; no sign-up). The free hosting sleeps when
+**Live demo: https://researchai-web.onrender.com** (click **Try the demo**; no sign-up). The free hosting sleeps when
 idle, so the first load can take a minute or two.
 
 ![Jobs page: matches scored against the profile, with the model's one-line reason](docs/screenshots/jobs.png)
@@ -236,10 +236,16 @@ docs/DECISIONS.md  why each technical choice was made, phase by phase
 
 ## Screenshots
 
+Taken from the live demo (real postings, demo account).
+
 | Job page: fit reason, red flags, tailored-resume diff | Application tracker |
 |---|---|
 | ![Job detail](docs/screenshots/job-detail.png) | ![Tracker](docs/screenshots/tracker.png) |
 
-| Company brief with clickable citations | Mobile |
+| Company brief with clickable citations | Jobs, dark theme |
 |---|---|
-| ![Company brief](docs/screenshots/brief.png) | <img src="docs/screenshots/mobile-jobs.png" width="300" alt="Jobs on mobile"> |
+| ![Company brief](docs/screenshots/brief.png) | ![Jobs, dark theme](docs/screenshots/jobs-dark.png) |
+
+| Landing page with the demo button | Mobile |
+|---|---|
+| ![Landing page](docs/screenshots/login.png) | <img src="docs/screenshots/mobile-jobs.png" width="300" alt="Jobs on mobile"> |
