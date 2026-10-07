@@ -20,7 +20,10 @@ $log = Join-Path $repo ("logs\daily-{0:yyyy-MM}.log" -f (Get-Date))
 "===== run-daily {0:yyyy-MM-dd HH:mm:ss} =====" -f (Get-Date) | Out-File -Append -Encoding utf8 $log
 # PYTHONIOENCODING: job titles contain non-ASCII characters; keep the log readable.
 $env:PYTHONIOENCODING = "utf-8"
-& $python -m app.cli run-daily *>> $log
+# Redirect through cmd, not PowerShell: Windows PowerShell 5.1 turns every
+# stderr line (Python logging, warnings) into an error record that stops the
+# script under ErrorActionPreference=Stop, and its *>> writes UTF-16.
+cmd.exe /d /s /c "`"`"$python`" -m app.cli run-daily >> `"$log`" 2>&1`""
 $code = $LASTEXITCODE
 "exit code: $code" | Out-File -Append -Encoding utf8 $log
 exit $code

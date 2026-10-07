@@ -6,7 +6,7 @@
 #
 # Runs as the current user, only when logged on (no stored password needed).
 # -StartWhenAvailable means that if the laptop was asleep/off at the
-# scheduled time, the task runs as soon as it's back on.
+# scheduled time, the task runs as soon as it's back on (on battery too).
 
 param(
     [string]$At = "09:00",
@@ -26,7 +26,9 @@ $script = Join-Path $PSScriptRoot "run_daily.ps1"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
     -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`""
 $trigger = New-ScheduledTaskTrigger -Daily -At $At
+# Battery flags: Windows' defaults skip the run on a laptop that's unplugged.
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable `
+    -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit (New-TimeSpan -Hours 1)
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
