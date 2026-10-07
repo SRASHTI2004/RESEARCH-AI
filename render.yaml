@@ -51,8 +51,11 @@ services:
   - type: web
     name: researchai-web
     runtime: static
-    buildCommand: cd frontend && npm ci && npm run build
-    staticPublishPath: frontend/dist
+    # Build from frontend/ only. From the repo root, Render sees
+    # requirements.txt and tries to pip-install the backend first.
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
     routes:
       # Client-side routes (/jobs/123, /tracker) all serve the SPA.
       - type: rewrite
