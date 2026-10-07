@@ -34,12 +34,6 @@ Render's 512 MB free plan.
   </tr>
 </table>
 
-<p align="center">
-  <img src="docs/screenshots/mobile-jobs.png" alt="Jobs on a phone" width="240">
-  &nbsp;
-  <img src="docs/screenshots/mobile-nav.png" alt="Navigation drawer on a phone" width="240">
-</p>
-
 <sub>Screenshots are taken from the live deployment, signed in as the demo account (real postings
 fetched by the app, sample tracker entries).</sub>
 
@@ -265,3 +259,7 @@ evaluation/        test set, labelling rubric, evaluation script and results
 frontend/src/      pages, components (shadcn/ui-style), API client, auth, theme
 docs/DECISIONS.md  why each technical choice was made, phase by phase
 ```
+
+## Author
+
+**Srashti Choudhary** · [github.com/SRASHTI2004](https://github.com/SRASHTI2004)

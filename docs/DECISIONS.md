@@ -1,29 +1,16 @@
 # Engineering decisions log
 
-This file records decisions made during the rebuild that weren't explicitly
-specified, along with the reasoning, so the "why" isn't lost. Newest entries
-at the bottom of each phase section.
+The technical decisions behind this project and the reasoning for each, so
+the "why" isn't lost. Newest entries at the bottom of each phase section.
 
 ## Phase 0 — Git foundation & config
 
-- **Git repo location:** the pre-existing `.git` on this machine was rooted at
-  the home directory, not at the project folder — it
-  belonged to an unrelated old "calculator" project (remotes `calculator` /
-  `calculator-project`, an unrelated repo). That repo was left
-  completely untouched (deleting/rewriting a repo outside this project's
-  scope is risky and unnecessary). Instead, a fresh git repo was initialized
-  directly inside `researchai/`, scoped correctly to just this project. The
-  stray-remote cleanup didn't apply once this was discovered —
-  there was nothing to remove from the new repo.
-- **Dependency pinning:** the project's venv had no packages actually
-  installed (`pip freeze` was empty), so versions were pinned to known-good
-  recent stable releases compatible with Python 3.12 rather than introspected
-  from the environment. Versions will be bumped deliberately, not floated.
+- **Dependency pinning:** every dependency is pinned to a known-good stable
+  release compatible with Python 3.12. Versions are bumped deliberately, not
+  floated.
 - **`.env.example`:** added `GROQ_MODEL` alongside `GROQ_API_KEY` in
   anticipation of Phase 1's shared LLM client factory, which reads the model
   name from env instead of hardcoding it in every agent file.
-- **API key rotation:** an API key that had been exposed outside `.env`
-  was rotated before this phase began.
 
 ## Scope decisions carried over from planning
 
@@ -85,8 +72,7 @@ at the bottom of each phase section.
   and Google both returned 429 for some queries and it transparently used
   another backend).
 - **Content extraction:** `trafilatura.fetch_url()` returned nothing against
-  at least one real site on my machine (likely a default-UA/TLS
-  quirk); switched to fetching with `requests` (custom User-Agent, explicit
+  at least one real site (likely a default-UA/TLS quirk); switched to fetching with `requests` (custom User-Agent, explicit
   timeout) and passing the HTML string into `trafilatura.extract()`
   separately — more robust and keeps fetch timeout under our own control.
   `fetch_page_text()` never raises; a failed fetch falls back to the
@@ -266,8 +252,8 @@ at the bottom of each phase section.
 
 ## Phase 6 — React + TypeScript frontend
 
-- **Hand-scaffolded, not `npm create vite`:** this machine's Node is
-  20.11.0; the current `create-vite` and several latest-major packages
+- **Hand-scaffolded, not `npm create vite`:** the target is Node 20 LTS
+  (20.11+); the current `create-vite` and several latest-major packages
   (vite 8, vitest 5, jsdom 30, `@testing-library/jest-dom` 7) all require
   Node ≥20.19/22+ and failed outright. Rather than requiring a Node
   upgrade, every package was pinned to the newest version that still
@@ -355,8 +341,7 @@ at the bottom of each phase section.
   suppressing the mypy error — turns a latent assumption into a checked
   one.
 - **Dockerfiles/docker-compose.yml were written but not verified live at
-  this point** — I had no Docker on the machine yet. Validated what was
-  possible without it: `docker-compose.yml` parses as valid YAML with the
+  this point**. Validated what was possible without running containers: `docker-compose.yml` parses as valid YAML with the
   expected 5 services (postgres/redis/api/worker/frontend), and the
   `DATABASE_URL`-only design from Phase 3 meant the same migrations should
   apply unchanged to Postgres. (Later verified: see "Deployment" below —
