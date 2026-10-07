@@ -26,15 +26,22 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # Briefs and tailoring use Gemini's lighter model: its free daily quota
+      # is far larger than gemini-flash-latest's (~20 requests/day), and the
+      # evaluation shows briefs stay fully cited on it.
+      - key: GEMINI_MODEL
+        value: gemini-flash-lite-latest
+      - key: GEMINI_WRITER_MODEL
+        value: gemini-flash-lite-latest
       # Public demo: no self-serve sign-up, a one-click demo account, and a
       # site-wide cap on LLM-heavy actions so visitors can't exhaust the
-      # free-tier quota (Gemini: ~20 requests/day on the brief model; a brief is 4).
+      # shared free-tier quota (a brief is 4 LLM calls).
       - key: DEMO_ENABLED
         value: "true"
       - key: REGISTRATION_ENABLED
         value: "false"
       - key: LLM_DAILY_ACTION_LIMIT
-        value: "4"
+        value: "8"
       # The demo runs against the committed, fictional example profile and resume.
       - key: PROFILE_PATH
         value: config/profile.example.yaml

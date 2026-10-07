@@ -152,9 +152,11 @@ def seed_demo(db: Session, now: datetime | None = None) -> SeedSummary:
         summary.applications += 1
 
     for item in _load("briefs.json"):
-        # Keep the original generation time: seeded briefs must not count
-        # against the daily LLM budget, and the UI should show when they were made.
-        created = _parse_dt(item["generated_at"]) or now
+        # Keep the original generation time so the UI shows when they were
+        # made, but never inside the last 24 h: seeded briefs must not count
+        # against the daily LLM budget (usage_service counts recent rows).
+        generated = _parse_dt(item["generated_at"]) or now
+        created = min(generated, now - timedelta(hours=25))
         brief = ResearchJob(
             company=item["company"],
             owner_id=user.id,

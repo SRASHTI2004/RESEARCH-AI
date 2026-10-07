@@ -90,3 +90,13 @@ def test_no_budget_means_unlimited(db_session, monkeypatch):
 
     assert usage_service.remaining(db_session) is None
     usage_service.ensure_budget(db_session)  # does not raise
+
+
+def test_seeded_briefs_do_not_use_the_daily_budget(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "demo_enabled", True)
+    monkeypatch.setattr(settings, "llm_daily_action_limit", 8)
+
+    summary = demo_service.seed_demo(db_session)
+
+    assert summary.briefs > 0
+    assert usage_service.remaining(db_session) == 8
