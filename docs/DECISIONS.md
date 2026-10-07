@@ -806,3 +806,14 @@ their terms forbid scraping and none offers a free public jobs API.
 - **Only example files go into the image.** The Dockerfile copies
   `config/profile.example.yaml` and `data/master_resume.example.yaml` by
   name; personal profile/resume files never reach an image.
+- **Briefs on Gemini's lighter model in production.** The first brief
+  evaluation failed on quotas: `gemini-flash-latest` allows about 20
+  requests/day on the free tier (5 briefs), and Groq's 8,000 tokens/minute
+  can't take the Researcher prompt. `gemini-flash-lite-latest` has a
+  separate, much larger quota; I measured briefs on it (all completed,
+  95% of factual lines cited, no invalid citation numbers) before switching
+  the demo to it and raising the daily cap from 4 to 8 actions.
+- **The brief metric had a bug the first time.** It only recognised `[3]`,
+  not combined citations like `[2, 6]`, which under-counted coverage
+  (85% instead of 95%). Fixed and covered by a unit test; the numbers in
+  the README are recomputed from the saved reports, not re-generated.

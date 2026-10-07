@@ -208,7 +208,8 @@ def run_llm(jobs: list[dict], runs: int) -> dict:
 
 # --- company briefs ----------------------------------------------------------
 
-_CITATION = re.compile(r"\[(\d+)\]")
+# "[3]" or a combined "[2, 6]"
+_CITATION = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _SECTION_END = re.compile(r"^#+\s*(sources|references|verification notes)\b", re.IGNORECASE | re.MULTILINE)
 
 
@@ -223,7 +224,7 @@ def brief_metrics(report: str, source_count: int) -> dict:
         if line.strip() and not line.lstrip().startswith("#") and len(line.split()) >= 6
     ]
     cited = [line for line in lines if _CITATION.search(line)]
-    numbers = [int(n) for n in _CITATION.findall(body)]
+    numbers = [int(n) for group in _CITATION.findall(body) for n in group.split(",")]
     invalid = [n for n in numbers if not 1 <= n <= source_count]
     notes = report[cut.start() :] if cut else ""
     return {
@@ -236,10 +237,11 @@ def brief_metrics(report: str, source_count: int) -> dict:
     }
 
 
-def run_briefs(companies: list[str], pause: int) -> dict:
+def run_briefs(companies: list[str], pause: int, save_to: Path | None = None) -> dict:
     from app.pipeline.graph import run_research  # heavy import (LangGraph); only when needed
 
     results = []
+    saved = []
     for index, company in enumerate(companies):
         if index:
             time.sleep(pause)  # free-tier tokens-per-minute limits; back-to-back briefs get rate limited
@@ -250,12 +252,34 @@ def run_briefs(companies: list[str], pause: int) -> dict:
         if state["status"] == "done":
             row["sources"] = len(state["sources"])
             row.update(brief_metrics(state["final_report"], len(state["sources"])))
+            saved.append(
+                {
+                    "company": company,
+                    "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+                    "research": state["research"],
+                    "analysis": state["analysis"],
+                    "report": state["report"],
+                    "final_report": state["final_report"],
+                    "sources": [
+                        {k: s.get(k, "") for k in ("index", "title", "url", "snippet")}
+                        for s in state["sources"]
+                    ],
+                }
+            )
         else:
             row["error"] = state.get("error")
         results.append(row)
 
+    if save_to and saved:
+        save_to.write_text(json.dumps(saved, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+
     done = [r for r in results if r["status"] == "done"]
-    summary: dict[str, Any] = {"companies": len(results), "completed": len(done), "items": results}
+    summary: dict[str, Any] = {
+        "companies": len(results),
+        "completed": len(done),
+        "model": settings.gemini_model,
+        "items": results,
+    }
     if done:
         summary["mean_seconds"] = round(statistics.mean(r["seconds"] for r in done), 1)
         summary["mean_sources"] = round(statistics.mean(r["sources"] for r in done), 1)
@@ -280,6 +304,9 @@ def main() -> None:
         "--briefs", nargs="*", default=[], metavar="COMPANY", help="companies to generate briefs for"
     )
     parser.add_argument("--pause", type=int, default=90, help="seconds between briefs (default 90)")
+    parser.add_argument(
+        "--save-briefs", type=Path, help="also write the generated briefs (demo fixture format)"
+    )
     args = parser.parse_args()
 
     jobs = load_jobs()
@@ -292,7 +319,7 @@ def main() -> None:
     if args.llm:
         report["llm_scoring"] = run_llm(jobs, args.runs)
     if args.briefs:
-        report["briefs"] = run_briefs(args.briefs, args.pause)
+        report["briefs"] = run_briefs(args.briefs, args.pause, args.save_briefs)
 
     # Keep results from earlier runs for the parts that weren't re-run this time.
     if RESULTS.exists():

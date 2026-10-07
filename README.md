@@ -102,7 +102,21 @@ What the numbers say:
 - **Red flags can only be judged for false alarms here.** None of the postings in the set is a scam,
   so the set can't measure how many real scams the flags catch.
 
-<!-- BRIEF_EVAL -->
+**Company briefs.** I ran 4 briefs (`python -m evaluation.run --briefs HackerRank Stripe Rubrik Plane`)
+on `gemini-flash-lite-latest`. The checks are computed in code from the final report, not taken from
+the Reviewer agent's verdict.
+
+| Metric | Result |
+|---|---|
+| completed | 4 of 4, 52 s on average, 7 sources each |
+| factual lines carrying a citation (HackerRank, Stripe, Rubrik) | 95% (78 of 82) |
+| citations pointing at a source that doesn't exist | 0 of 205 |
+
+The uncited lines are mostly interview-prep suggestions ("candidates should expect…") rather than
+facts about the company. The Plane brief shows the limits of these checks. The web search returned
+other things named "Plane", and the brief correctly says its sources don't cover the company, yet it
+still scores 100% on citation coverage, because every line cites something. A structural check can't
+tell a well-sourced brief from a confidently-cited "we found nothing".
 
 ## Running it locally
 
@@ -159,7 +173,10 @@ Three settings keep a shared free-tier LLM quota from running out:
 
 - `REGISTRATION_ENABLED=false`: no self-serve sign-up.
 - `DEMO_ENABLED=true`: one-click demo account. Its data resets on every start (`python -m app.cli seed-demo`).
-- `LLM_DAILY_ACTION_LIMIT=4`: company briefs plus LLM resume tailoring, per 24 hours across all visitors.
+- `LLM_DAILY_ACTION_LIMIT=8`: company briefs plus LLM resume tailoring, per 24 hours across all visitors.
+
+The demo runs briefs on `gemini-flash-lite-latest`. Its free daily quota is much larger than
+`gemini-flash-latest`'s (about 20 requests a day), and the brief evaluation above was run on it.
 
 Memory, measured in the production image under Render's free-plan limits (512 MB, 0.1 CPU,
 Postgres 16): 148 MB idle, and 170 MB peak during resume tailoring, PDF/DOCX export and a brief run.
@@ -177,10 +194,12 @@ CI runs all of these on every push, plus the forbidden-files check.
 
 ## Known limitations
 
-- **Free-tier LLM quotas shape everything.** A brief takes four LLM calls. Gemini's free tier allows
-  about 20 calls a day on the brief model, and Groq's 8,000 tokens/minute is too small for the
-  Researcher prompt. So the demo caps AI actions at 4 per day, and briefs fail once Gemini's daily
-  quota is gone.
+- **Free-tier LLM quotas shape everything.** A brief takes four LLM calls. `gemini-flash-latest`
+  allows only about 20 a day on the free tier, and Groq's 8,000 tokens/minute is too small for the
+  Researcher prompt. So the demo uses the lighter Gemini model, caps AI actions at 8 per day, and
+  briefs fail once Gemini's daily quota is gone.
+- **Ambiguous company names produce empty briefs.** Search has no disambiguation: "Plane" returned
+  other companies, and the brief (correctly) reported that it found nothing.
 - **Only sources with a public API.** Many Indian companies post only on LinkedIn or Naukri, which
   this deliberately doesn't touch.
 - **Known filter misses** (from the evaluation):

@@ -13,7 +13,7 @@ def test_brief_metrics_counts_cited_lines_and_invalid_numbers():
 
 ## Company Overview
 Acme builds payment software for small businesses in India [1].
-It was founded in 2015 and is headquartered in Pune [2][7].
+It was founded in 2015 and is headquartered in Pune [2, 7].
 The company is known for its friendly engineering culture overall.
 
 ## Sources

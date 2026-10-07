@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-06T16:28:06+00:00",
+  "generated_at": "2026-10-07T04:38:56+00:00",
   "dataset": {
     "postings": 126,
     "labelled": 120
@@ -51,6 +51,70 @@
           "Mentions Telegram/WhatsApp contact — verify the recruiter on the company's own site"
         ]
       }
+    ]
+  },
+  "briefs": {
+    "companies": 4,
+    "completed": 4,
+    "model": "gemini-flash-lite-latest",
+    "items": [
+      {
+        "company": "HackerRank",
+        "status": "done",
+        "seconds": 53.8,
+        "sources": 8,
+        "claim_lines": 27,
+        "cited_lines": 26,
+        "citation_coverage_pct": 96.3,
+        "citations": 39,
+        "invalid_citations": 0,
+        "reviewer_found_issues": false
+      },
+      {
+        "company": "Stripe",
+        "status": "done",
+        "seconds": 47.7,
+        "sources": 6,
+        "claim_lines": 28,
+        "cited_lines": 26,
+        "citation_coverage_pct": 92.9,
+        "citations": 58,
+        "invalid_citations": 0,
+        "reviewer_found_issues": false
+      },
+      {
+        "company": "Rubrik",
+        "status": "done",
+        "seconds": 46.2,
+        "sources": 8,
+        "claim_lines": 27,
+        "cited_lines": 26,
+        "citation_coverage_pct": 96.3,
+        "citations": 40,
+        "invalid_citations": 0,
+        "reviewer_found_issues": false
+      },
+      {
+        "company": "Plane",
+        "status": "done",
+        "seconds": 59.0,
+        "sources": 6,
+        "claim_lines": 11,
+        "cited_lines": 11,
+        "citation_coverage_pct": 100.0,
+        "citations": 68,
+        "invalid_citations": 0,
+        "reviewer_found_issues": false,
+        "note": "web search returned other companies named Plane; the brief says its sources do not cover the company"
+      }
+    ],
+    "mean_seconds": 51.7,
+    "mean_sources": 7,
+    "citation_coverage_pct": 95.1,
+    "invalid_citations": 0,
+    "total_citations": 205,
+    "coverage_excludes": [
+      "Plane (wrong-company sources)"
     ]
   },
   "llm_scoring": {
