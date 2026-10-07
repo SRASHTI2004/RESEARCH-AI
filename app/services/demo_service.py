@@ -107,6 +107,10 @@ def _ensure_jobs(db: Session, now: datetime) -> tuple[dict[str, Job], int]:
             )
             db.add(job)
             added += 1
+        elif job.digested_at is not None and job.source == item["source"]:
+            # Keep sample jobs inside the jobs page's default "last 14 days"
+            # window, however long the demo has been running.
+            job.first_seen_at = job.last_seen_at = now
         by_fingerprint[fingerprint] = job
     db.flush()
     return by_fingerprint, added

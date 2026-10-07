@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import func, select
 
 from app.core.config import settings
@@ -100,3 +102,15 @@ def test_seeded_briefs_do_not_use_the_daily_budget(db_session, monkeypatch):
 
     assert summary.briefs > 0
     assert usage_service.remaining(db_session) == 8
+
+
+def test_reseeding_keeps_sample_jobs_recent(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "demo_enabled", True)
+    long_ago = datetime(2026, 1, 1, tzinfo=UTC)
+    demo_service.seed_demo(db_session, now=long_ago)
+
+    later = long_ago + timedelta(days=60)
+    demo_service.seed_demo(db_session, now=later)
+
+    oldest = db_session.scalar(select(func.min(Job.first_seen_at)))
+    assert oldest.replace(tzinfo=UTC) == later
