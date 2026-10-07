@@ -264,7 +264,8 @@ docs/DECISIONS.md  why each technical choice was made, phase by phase
 
 Code: MIT ([LICENSE](LICENSE)). The job postings in `evaluation/data/` and `app/demo/`, and the
 web content quoted in the sample company briefs, belong to their original publishers. They are
-included unmodified for evaluation and the demo, with source URLs kept.
+included unmodified for evaluation and the demo: each posting records the job board it came from,
+demo postings keep their original links, and briefs list their sources.
 
 ## Author
 
