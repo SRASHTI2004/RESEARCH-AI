@@ -99,7 +99,9 @@ function JobCard({
                 <MapPin className="size-3.5" aria-hidden />
                 {location}
               </span>
-              <span>{timeAgo(job.first_seen_at)}</span>
+              <span title={`Found by the app ${formatDateTime(job.first_seen_at)}`}>
+                {job.posted_at ? `posted ${timeAgo(job.posted_at)}` : `found ${timeAgo(job.first_seen_at)}`}
+              </span>
             </div>
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               <SourceBadge job={job} />
@@ -249,8 +251,8 @@ export function JobsPage() {
               onChange={(e) => update({ days: e.target.value ? Number(e.target.value) : undefined })}
             >
               <option value="1">Last 24h</option>
-              <option value="7">Last 7 days</option>
-              <option value="14">Last 14 days</option>
+              <option value="7">New in last 7 days</option>
+              <option value="14">New in last 14 days</option>
               <option value="">Any time</option>
             </NativeSelect>
             <div className="col-span-2 flex flex-wrap items-center gap-x-5 gap-y-2 px-1 sm:ml-2">
