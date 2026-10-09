@@ -328,3 +328,27 @@ def test_html_to_text_and_parse_datetime_edge_cases():
 def test_html_to_text_repairs_double_encoded_utf8():
     assert html_to_text("Software Engineer â\u0080\u0093 Intern") == "Software Engineer – Intern"
     assert html_to_text("Café – ok") == "Café – ok"
+
+
+def test_adzuna_searches_each_place_and_ignores_estimated_salaries(monkeypatch):
+    monkeypatch.setattr("app.core.jobsources.aggregators.settings.adzuna_app_id", "id")
+    monkeypatch.setattr("app.core.jobsources.aggregators.settings.adzuna_app_key", "key")
+    monkeypatch.setattr("app.core.jobsources.aggregators.settings.adzuna_where", "Noida,Gurgaon,")
+    result = {
+        "id": 7,
+        "title": "Backend Developer",
+        "company": {"display_name": "Acme"},
+        "location": {"display_name": "Noida, Ghaziabad"},
+        "redirect_url": "https://www.adzuna.in/land/ad/7",
+        "description": "Python backend role",
+        "salary_min": 300000,
+        "salary_max": 500000,
+        "salary_is_predicted": "1",
+    }
+    calls = _stub_json(monkeypatch, {"api.adzuna.com": {"results": [result]}})
+    monkeypatch.setattr("app.core.jobsources.aggregators.time.sleep", lambda _s: None)
+
+    jobs = aggregators.AdzunaSource(["python"]).fetch()
+
+    assert [c[1].get("where") for c in calls] == ["Noida", "Gurgaon", None]
+    assert jobs[0].salary_max is None and jobs[0].salary_currency == ""

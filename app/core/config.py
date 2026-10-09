@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
     adzuna_country: str = "in"
+    # Comma-separated places to search (e.g. "Noida,Gurgaon,"); an empty entry
+    # searches the whole country (catches remote roles). Default: whole country.
+    adzuna_where: str = ""
 
     # Reddit (optional) — free "script" app at https://www.reddit.com/prefs/apps;
     # read-only app-only OAuth, skipped when unset. Only [Hiring]/"Hiring"-flair posts.

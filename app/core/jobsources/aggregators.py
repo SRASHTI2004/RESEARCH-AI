@@ -5,6 +5,7 @@ show "via <source>". Polling intervals follow each site's stated guidance.
 """
 
 import logging
+import time
 from typing import Any
 
 from defusedxml import ElementTree
@@ -204,36 +205,47 @@ class AdzunaSource(JobSource):
 
     def fetch(self) -> list[NormalizedJob]:
         jobs = []
+        places = [w.strip() for w in settings.adzuna_where.split(",")] or [""]
+        first = True
         for query in self.queries:
-            data = http.get_json(
-                f"https://api.adzuna.com/v1/api/jobs/{settings.adzuna_country}/search/1",
-                params={
+            for place in places:
+                if not first:
+                    # Free tier allows ~25 requests/minute; stay well under it.
+                    time.sleep(2.6)
+                first = False
+                params: dict[str, str | int] = {
                     "app_id": settings.adzuna_app_id,
                     "app_key": settings.adzuna_app_key,
                     "what": query,
                     "results_per_page": 50,
                     "max_days_old": 7,
                     "content-type": "application/json",
-                },
-            )
-            for item in data.get("results", []):
-                location = (item.get("location") or {}).get("display_name", "") or ""
-                description = html_to_text(item.get("description"))
-                jobs.append(
-                    NormalizedJob(
-                        source=self.name,
-                        external_id=str(item.get("id")),
-                        title=html_to_text(item.get("title")),
-                        company=(item.get("company") or {}).get("display_name", "") or "",
-                        url=item.get("redirect_url", ""),
-                        location=location,
-                        is_remote="remote" in f"{location} {description}".lower(),
-                        description=description,
-                        posted_at=parse_datetime(item.get("created")),
-                        employment_type=item.get("contract_time", "") or "",
-                        salary_min=_float_or_none(item.get("salary_min")),
-                        salary_max=_float_or_none(item.get("salary_max")),
-                        salary_currency="INR" if settings.adzuna_country == "in" else "",
-                    )
+                }
+                if place:
+                    params["where"] = place
+                data = http.get_json(
+                    f"https://api.adzuna.com/v1/api/jobs/{settings.adzuna_country}/search/1", params=params
                 )
+                for item in data.get("results", []):
+                    # Adzuna fills in its own estimate when the employer gives no salary.
+                    predicted = str(item.get("salary_is_predicted", "0")) == "1"
+                    location = (item.get("location") or {}).get("display_name", "") or ""
+                    description = html_to_text(item.get("description"))
+                    jobs.append(
+                        NormalizedJob(
+                            source=self.name,
+                            external_id=str(item.get("id")),
+                            title=html_to_text(item.get("title")),
+                            company=(item.get("company") or {}).get("display_name", "") or "",
+                            url=item.get("redirect_url", ""),
+                            location=location,
+                            is_remote="remote" in f"{location} {description}".lower(),
+                            description=description,
+                            posted_at=parse_datetime(item.get("created")),
+                            employment_type=item.get("contract_time", "") or "",
+                            salary_min=None if predicted else _float_or_none(item.get("salary_min")),
+                            salary_max=None if predicted else _float_or_none(item.get("salary_max")),
+                            salary_currency="" if predicted or settings.adzuna_country != "in" else "INR",
+                        )
+                    )
         return jobs

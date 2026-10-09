@@ -66,6 +66,13 @@ class LocationPrefs(BaseModel):
     open_to_global_remote: bool = True
 
 
+class PayFloor(BaseModel):
+    """Minimum stated pay for jobs in these places ("remote" matches remote roles)."""
+
+    places: list[str]
+    min_annual_inr: int
+
+
 class Profile(BaseModel):
     name: str = ""
     email: str = ""
@@ -78,6 +85,9 @@ class Profile(BaseModel):
     max_years_experience: int = 2
     # Postings older than this are dropped: old listings are often no longer hiring. 0 = keep all.
     max_posting_age_days: int = 45
+    # Jobs whose stated pay tops out below the floor for their place are dropped.
+    # Jobs that don't state pay are kept (most Indian postings don't).
+    pay_floors: list[PayFloor] = Field(default_factory=list)
 
     target_roles: list[str] = Field(default_factory=lambda: ["Software Engineer", "Full Stack Developer"])
     primary_skills: list[str] = Field(default_factory=list)

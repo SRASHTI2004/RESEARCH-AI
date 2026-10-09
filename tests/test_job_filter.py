@@ -193,3 +193,51 @@ def test_stale_postings_are_rejected(profile):
 def test_posting_age_limit_can_be_disabled(profile):
     profile.max_posting_age_days = 0
     assert _evaluate(profile, posted_at=datetime.now(UTC) - timedelta(days=400)).passed
+
+
+def _ncr_profile(profile):
+    from app.core.profile import PayFloor
+
+    profile.locations = LocationPrefs(
+        preferred_cities=["Noida", "Greater Noida", "Gurugram", "Gurgaon"], accept_any_india_city=False
+    )
+    profile.pay_floors = [
+        PayFloor(places=["Noida", "Greater Noida"], min_annual_inr=500_000),
+        PayFloor(places=["Gurugram", "Gurgaon"], min_annual_inr=800_000),
+        PayFloor(places=["remote"], min_annual_inr=360_000),
+    ]
+    return profile
+
+
+@pytest.mark.parametrize(
+    "location, is_remote, salary_max, text, passes",
+    [
+        ("Noida, Uttar Pradesh", False, 600_000, "", True),
+        ("Noida, Ghaziabad", False, 400_000, "", False),  # below the Noida floor
+        ("Noida", False, None, "", True),  # pay not stated: kept
+        ("Noida", False, None, "CTC: 3 LPA", False),  # stated in the text, below the floor
+        ("Gurugram, Haryana", False, 600_000, "", False),  # fine for Noida, not for Gurugram
+        ("Gurgaon", False, 900_000, "", True),
+        ("Remote", True, None, "Stipend: 20,000/month", False),
+        ("Remote", True, None, "Pay: 40k per month", True),
+        ("Bengaluru, Karnataka", False, 2_000_000, "", False),  # wrong city, whatever the pay
+        ("Pune", False, None, "", False),
+    ],
+)
+def test_ncr_cities_and_pay_floors(profile, location, is_remote, salary_max, text, passes):
+    _ncr_profile(profile)
+    result = _evaluate(
+        profile,
+        location=location,
+        is_remote=is_remote,
+        description=f"{text} {GOOD_DESCRIPTION}",
+        salary_max=salary_max,
+        salary_currency="INR" if salary_max else "",
+    )
+    assert result.passed is passes, result.reason
+
+
+def test_pay_floor_reason_is_readable(profile):
+    _ncr_profile(profile)
+    result = _evaluate(profile, location="Gurugram", salary_max=600_000, salary_currency="INR")
+    assert result.reason == "pays up to ₹6 LPA, below your ₹8 LPA minimum for Gurugram"

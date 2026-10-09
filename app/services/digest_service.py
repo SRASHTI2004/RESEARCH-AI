@@ -16,6 +16,7 @@ from app.core import notify
 from app.core.config import settings
 from app.models.job import Job
 from app.repositories import application_repository
+from app.services.pay import lpa_label
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class DigestItem:
     fresher_friendly: bool | None
     posted_at: datetime | None = None
     is_remote: bool = False
+    pay: str = "pay not stated"
 
 
 @dataclass
@@ -94,6 +96,7 @@ def _to_item(job: Job) -> DigestItem:
         fresher_friendly=job.fresher_friendly,
         posted_at=job.posted_at,
         is_remote=job.is_remote,
+        pay=lpa_label(job.salary_min, job.salary_max, job.salary_currency),
     )
 
 
@@ -159,7 +162,7 @@ def format_telegram(content: DigestContent) -> str:
             f"📍 {e(item.location or 'n/a')} · ⭐ {e(_score_label(item))}"
             + (" · 🌱 fresher-friendly" if item.fresher_friendly else ""),
             e(item.reason),
-            f"🗓 {posted_label(item.posted_at)}"
+            f"💰 {e(item.pay)} · 🗓 {posted_label(item.posted_at)}"
             + (" · 🏠 remote" if item.is_remote else "")
             + (" · ✅ company careers page" if item.official_source else f" · via {e(item.source)}"),
         ]

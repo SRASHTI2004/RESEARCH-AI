@@ -17,6 +17,7 @@ from app.models.job import Job, SourceRun
 from app.repositories import job_repository as repo
 from app.services import job_filter
 from app.services.genuineness import detect_red_flags
+from app.services.pay import annual_inr_from_text
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,13 @@ def _apply_rules(job: Job, profile: Profile) -> None:
         official_source=job.official_source,
         posted_at=job.posted_at,
         profile=profile,
+        salary_max=job.salary_max,
+        salary_currency=job.salary_currency,
     )
+    if not job.salary_max:
+        stated = annual_inr_from_text(f"{job.title}\n{job.description}")
+        if stated:
+            job.salary_max, job.salary_currency = float(stated), "INR"
     job.passed_prefilter = result.passed
     job.prefilter_reason = result.reason
     job.rule_score = result.rule_score

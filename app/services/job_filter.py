@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from app.core.jobsources.text import ensure_utc
-from app.core.profile import Profile
+from app.core.profile import PayFloor, Profile
+from app.services.pay import annual_inr
 
 SENIOR_TITLE = re.compile(
     r"\b(senior|sr\.?|lead|principal|staff|manager|director|head|architect|vp|vice president|chief|"
@@ -153,6 +154,21 @@ def evaluate_location(location: str, is_remote: bool, profile: Profile) -> Locat
     return LocationVerdict(False, f"remote but restricted to: {location}", 0)
 
 
+def _lpa(amount: float) -> str:
+    return f"₹{amount / 100_000:.1f}".rstrip("0").rstrip(".") + " LPA"
+
+
+def pay_floor_for(location: str, remote: bool, profile: Profile) -> PayFloor | None:
+    """The floor for the job's city if one matches, else the remote floor for remote roles."""
+    loc = location.lower()
+    for floor in profile.pay_floors:
+        if _has_any(loc, [p.lower() for p in floor.places if p.lower() != "remote"]):
+            return floor
+    if remote:
+        return next((f for f in profile.pay_floors if "remote" in [p.lower() for p in f.places]), None)
+    return None
+
+
 @dataclass
 class FilterResult:
     passed: bool
@@ -171,6 +187,8 @@ def evaluate(
     posted_at: datetime | None,
     profile: Profile,
     now: datetime | None = None,
+    salary_max: float | None = None,
+    salary_currency: str = "",
 ) -> FilterResult:
     title_l = title.lower()
 
@@ -208,6 +226,16 @@ def evaluate(
     where = evaluate_location(location, is_remote, profile)
     if not where.ok:
         return FilterResult(False, where.reason, 0)
+
+    floor = pay_floor_for(location, is_remote or where.reason.startswith("remote"), profile)
+    if floor:
+        pay = annual_inr(salary_max, salary_currency, f"{title}\n{description}")
+        if pay is not None and pay < floor.min_annual_inr:
+            return FilterResult(
+                False,
+                f"pays up to {_lpa(pay)}, below your {_lpa(floor.min_annual_inr)} minimum for {floor.places[0]}",
+                0,
+            )
 
     # --- passed: compute a rough 0-100 rank for picking the LLM's top N ---
     haystack = f"{title}\n{description}\n{' '.join(tags)}".lower()
