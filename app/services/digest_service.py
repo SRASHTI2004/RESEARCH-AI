@@ -35,6 +35,8 @@ class DigestItem:
     source: str
     official_source: bool
     fresher_friendly: bool | None
+    posted_at: datetime | None = None
+    is_remote: bool = False
 
 
 @dataclass
@@ -90,6 +92,8 @@ def _to_item(job: Job) -> DigestItem:
         source=job.source,
         official_source=job.official_source,
         fresher_friendly=job.fresher_friendly,
+        posted_at=job.posted_at,
+        is_remote=job.is_remote,
     )
 
 
@@ -99,7 +103,12 @@ def select_digest_jobs(db: Session, top_n: int | None = None, *, include_digeste
     rule score, clearly labelled as such."""
     limit = top_n or settings.digest_top_n
     since = datetime.now(UTC) - timedelta(days=settings.digest_max_age_days)
-    base = select(Job).where(Job.passed_prefilter.is_(True), Job.first_seen_at >= since)
+    # Only jobs still listed at their source recently: a posting that has
+    # dropped off its board has most likely been filled or closed.
+    still_listed = datetime.now(UTC) - timedelta(days=3)
+    base = select(Job).where(
+        Job.passed_prefilter.is_(True), Job.first_seen_at >= since, Job.last_seen_at >= still_listed
+    )
     if not include_digested:
         base = base.where(Job.digested_at.is_(None))
 
@@ -131,6 +140,14 @@ def _score_label(item: DigestItem) -> str:
     return f"{item.score}/100" if item.ai_scored else f"{item.score}/100 (rule)"
 
 
+def posted_label(posted_at: datetime | None, now: datetime | None = None) -> str:
+    if posted_at is None:
+        return "posting date not given"
+    posted = posted_at if posted_at.tzinfo else posted_at.replace(tzinfo=UTC)
+    days = ((now or datetime.now(UTC)) - posted).days
+    return "posted today" if days <= 0 else f"posted {days}d ago"
+
+
 def format_telegram(content: DigestContent) -> str:
     e = html.escape
     parts = [f"<b>{e(_header(content))}</b>"]
@@ -142,6 +159,9 @@ def format_telegram(content: DigestContent) -> str:
             f"📍 {e(item.location or 'n/a')} · ⭐ {e(_score_label(item))}"
             + (" · 🌱 fresher-friendly" if item.fresher_friendly else ""),
             e(item.reason),
+            f"🗓 {posted_label(item.posted_at)}"
+            + (" · 🏠 remote" if item.is_remote else "")
+            + (" · ✅ company careers page" if item.official_source else f" · via {e(item.source)}"),
         ]
         if item.red_flags:
             lines.append("⚠️ Check: " + e("; ".join(item.red_flags)))

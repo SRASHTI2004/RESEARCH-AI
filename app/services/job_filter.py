@@ -62,6 +62,34 @@ INDIA_PLACES = (
     "bhubaneswar",
 )
 
+# Not a real opening: talent pools and "send us your CV" forms.
+NOT_AN_OPENING = re.compile(
+    r"expression of interest|talent (?:pool|community|network)|general application|future (?:opportunities|openings)"
+    r"|join our talent|don't see (?:a|the) (?:role|position)",
+    re.IGNORECASE,
+)
+
+# Batch-restricted roles: "2027 graduates", "batch of 2025", "class of 2027",
+# "2025/2026 pass-outs", "2027 Leadership Development Program".
+_YEAR = r"20[2-3]\d"
+_BATCH_PATTERNS = (
+    rf"(?P<y>{_YEAR})(?:\s*(?:/|,|&|or|and|-)\s*(?P<y2>{_YEAR}))?\s*(?:graduates?|grads?|batch|pass[- ]?outs?|passouts?|passing[- ]out)",
+    rf"(?:batch|class|graduates?|graduating|passing out|pass[- ]?out)\s*(?:of|in|year)?\s*:?\s*(?P<y>{_YEAR})(?:\s*(?:/|,|&|or|and|-)\s*(?P<y2>{_YEAR}))?",
+    rf"(?P<y>{_YEAR})\s+(?:leadership|graduate|new grad|campus|early careers?)\b",
+)
+_BATCH = [re.compile(p, re.IGNORECASE) for p in _BATCH_PATTERNS]
+
+
+def batch_years(title: str, description: str) -> set[int]:
+    """Graduation years a posting is restricted to, if it says so."""
+    years: set[int] = set()
+    for pattern in _BATCH:
+        for text in (title, description):
+            for m in pattern.finditer(text):
+                years.update(int(y) for y in (m.group("y"), m.groupdict().get("y2")) if y)
+    return years
+
+
 GLOBAL_REMOTE = ("anywhere", "worldwide", "global", "world", "apac", "asia", "asia-pacific")
 _REMOTE_WORDS = re.compile(r"\b(?:fully\s+)?remote(?:\s+first)?\b|\bwork from home\b|\bwfh\b", re.IGNORECASE)
 
@@ -158,6 +186,21 @@ def evaluate(
     if excluded:
         return FilterResult(False, f"title contains excluded keyword '{excluded}'", 0)
 
+    if NOT_AN_OPENING.search(title) or NOT_AN_OPENING.search(description[:600]):
+        return FilterResult(False, "talent pool / expression of interest, not an opening", 0)
+
+    if profile.graduation_year:
+        batches = batch_years(title, description)
+        if batches and profile.graduation_year not in batches:
+            listed = "/".join(str(y) for y in sorted(batches))
+            return FilterResult(False, f"only for the {listed} batch", 0)
+
+    posted = ensure_utc(posted_at)
+    if posted is not None and profile.max_posting_age_days:
+        age = ((now or datetime.now(UTC)) - posted).days
+        if age > profile.max_posting_age_days:
+            return FilterResult(False, f"posted {age} days ago (likely not actively hiring)", 0)
+
     years = min_years_required(description)
     if years is not None and years > profile.max_years_experience:
         return FilterResult(False, f"asks for {years}+ years of experience", 0)
@@ -180,7 +223,6 @@ def evaluate(
     score += where.points
     if official_source:
         score += 5
-    posted = ensure_utc(posted_at)
     if posted is not None:
         age_days = ((now or datetime.now(UTC)) - posted).days
         score += 10 if age_days <= 3 else 5 if age_days <= 7 else 0

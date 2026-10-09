@@ -45,3 +45,21 @@ def test_vague_company_and_short_description():
     flags = _flags(company="Confidential", description="Great job. Apply now.")
     assert any("Company name" in f for f in flags)
     assert any("short description" in f for f in flags)
+
+
+def test_gig_work_is_labelled():
+    flags = detect_red_flags(
+        title="Software Engineer / AI Code Trainer (Python)",
+        company="CodeForAI",
+        description="Earn $50-$125/hr reviewing AI-generated code, fully asynchronous. " * 5,
+    )
+    assert any("gig" in f for f in flags)
+
+
+def test_salaried_role_is_not_labelled_gig():
+    flags = detect_red_flags(
+        title="Software Engineer",
+        company="Acme",
+        description="Full-time salaried role building our payments API in Python. " * 5,
+    )
+    assert not any("gig" in f for f in flags)

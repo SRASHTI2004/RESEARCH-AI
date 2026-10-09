@@ -145,3 +145,50 @@ def test_fresher_titles_pass(profile, title):
 def test_naive_datetimes_from_sqlite_are_handled(profile):
     naive = datetime.now(UTC).replace(tzinfo=None)
     assert _evaluate(profile, posted_at=naive).passed
+
+
+@pytest.mark.parametrize(
+    "title, description",
+    [
+        ("Software Developer, 2027 Leadership Development Program", "Join our programme."),
+        ("Software Engineer", "Open to 2025 graduates only. " + GOOD_DESCRIPTION),
+        ("SDE Intern", "Eligibility: B.Tech batch of 2027. " + GOOD_DESCRIPTION),
+        ("Graduate Engineer Trainee", "We are hiring 2024/2025 pass-outs. " + GOOD_DESCRIPTION),
+    ],
+)
+def test_other_graduation_batches_are_rejected(profile, title, description):
+    profile.graduation_year = 2026
+    result = _evaluate(profile, title=title, description=description)
+    assert not result.passed and "batch" in result.reason
+
+
+def test_own_graduation_batch_passes(profile):
+    profile.graduation_year = 2026
+    description = "Hiring 2025/2026 graduates. " + GOOD_DESCRIPTION
+    assert _evaluate(profile, title="Software Engineer", description=description).passed
+    assert job_filter.batch_years("x", description) == {2025, 2026}
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Backend, Frontend, and Fullstack Engineering Expression of Interest Form",
+        "Software Engineer - General Application",
+        "Software Engineer - Future Opportunities",
+    ],
+)
+def test_talent_pools_are_not_openings(profile, title):
+    result = _evaluate(profile, title=title)
+    assert not result.passed and "not an opening" in result.reason
+
+
+def test_stale_postings_are_rejected(profile):
+    old = _evaluate(profile, posted_at=datetime.now(UTC) - timedelta(days=200))
+    recent = _evaluate(profile, posted_at=datetime.now(UTC) - timedelta(days=20))
+    assert not old.passed and "not actively hiring" in old.reason
+    assert recent.passed
+
+
+def test_posting_age_limit_can_be_disabled(profile):
+    profile.max_posting_age_days = 0
+    assert _evaluate(profile, posted_at=datetime.now(UTC) - timedelta(days=400)).passed

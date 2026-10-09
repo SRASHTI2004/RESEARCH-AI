@@ -118,11 +118,12 @@ def block_job_source_network(monkeypatch):
     """Job sources only reach the network through app.core.jobsources.http —
     fail loudly if a test forgets to stub it, instead of hitting real boards."""
 
-    def _blocked(url, params=None):
+    def _blocked(url, *args, **kwargs):
         raise AssertionError(f"Unmocked job-source HTTP call in a test: {url}")
 
     monkeypatch.setattr("app.core.jobsources.http.get_json", _blocked)
     monkeypatch.setattr("app.core.jobsources.http.get_text", _blocked)
+    monkeypatch.setattr("app.core.jobsources.http.post_form", _blocked)
 
 
 @pytest.fixture(autouse=True)

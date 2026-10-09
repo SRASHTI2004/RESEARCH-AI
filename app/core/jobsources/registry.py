@@ -11,6 +11,7 @@ from app.core.jobsources.aggregators import (
 )
 from app.core.jobsources.ats import AshbySource, GreenhouseSource, LeverSource, load_companies
 from app.core.jobsources.base import JobSource
+from app.core.jobsources.reddit import RedditSource
 from app.core.profile import Profile
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ ALL_SOURCE_NAMES = (
     "himalayas",
     "arbeitnow",
     "adzuna",
+    "reddit",
 )
 
 
@@ -44,6 +46,7 @@ def build_sources(profile: Profile, names: list[str] | None = None) -> list[JobS
         "himalayas": lambda: HimalayasSource(queries),
         "arbeitnow": ArbeitnowSource,
         "adzuna": lambda: AdzunaSource(queries),
+        "reddit": lambda: RedditSource(),
     }
 
     sources: list[JobSource] = []

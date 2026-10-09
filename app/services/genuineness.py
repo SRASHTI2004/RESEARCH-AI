@@ -29,6 +29,11 @@ _EASY_MONEY = re.compile(
 _JUNIOR = re.compile(
     r"\b(junior|jr|fresher|entry[- ]level|intern|internship|trainee|graduate)\b", re.IGNORECASE
 )
+_GIG = re.compile(
+    r"\bai (?:code |coding )?trainer\b|data annotat|\brlhf\b|\bper hour\b|/\s*h(?:ou)?r\b|\bhourly rate\b"
+    r"|\bfreelance\b|\bgig\b|\bcontract(?:or)? (?:role|position|basis)\b",
+    re.IGNORECASE,
+)
 _VAGUE_COMPANY = {"", "confidential", "stealth", "undisclosed", "hiring company", "company", "n/a", "na"}
 
 # Annual pay above which a junior/intern role is suspicious.
@@ -60,6 +65,9 @@ def detect_red_flags(
     limit = _UNREALISTIC_JUNIOR_PAY.get(salary_currency.upper())
     if limit and salary_max and salary_max > limit and _JUNIOR.search(title):
         flags.append(f"Unusually high pay for a junior role ({salary_currency} {salary_max:,.0f})")
+
+    if _GIG.search(title) or _GIG.search(description):
+        flags.append("Looks like hourly/contract gig work, not a salaried job")
 
     if company.strip().lower() in _VAGUE_COMPANY or len(company.strip()) < 2:
         flags.append("Company name is missing or vague")

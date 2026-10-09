@@ -249,3 +249,14 @@ def test_long_telegram_digest_is_split_without_breaking_items():
     assert len(chunks) > 1
     assert all(len(c) <= notify.TELEGRAM_MAX_CHARS for c in chunks)
     assert sum(c.count("<b>") for c in chunks) == 10
+
+
+def test_posted_label():
+    from datetime import UTC, datetime, timedelta
+
+    from app.services.digest_service import posted_label
+
+    now = datetime(2026, 10, 9, 9, tzinfo=UTC)
+    assert posted_label(None, now) == "posting date not given"
+    assert posted_label(now, now) == "posted today"
+    assert posted_label((now - timedelta(days=3)).replace(tzinfo=None), now) == "posted 3d ago"

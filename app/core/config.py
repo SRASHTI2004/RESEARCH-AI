@@ -100,7 +100,9 @@ class Settings(BaseSettings):
 
     # Comma-separated job sources to run. Unknown names are skipped with a
     # warning; sources that need a key (adzuna) skip themselves when unset.
-    job_sources: str = "greenhouse,lever,ashby,remotive,remoteok,weworkremotely,himalayas,arbeitnow,adzuna"
+    job_sources: str = (
+        "greenhouse,lever,ashby,remotive,remoteok,weworkremotely,himalayas,arbeitnow,adzuna,reddit"
+    )
     job_source_timeout_seconds: float = 20.0
     job_source_user_agent: str = "ResearchAI-JobAssistant/1.0 (personal, non-commercial job search)"
 
@@ -108,6 +110,12 @@ class Settings(BaseSettings):
     adzuna_app_id: str = ""
     adzuna_app_key: str = ""
     adzuna_country: str = "in"
+
+    # Reddit (optional) — free "script" app at https://www.reddit.com/prefs/apps;
+    # read-only app-only OAuth, skipped when unset. Only [Hiring]/"Hiring"-flair posts.
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_subreddits: str = "developersIndia,forhire"
 
     # LLM scoring: only the top-N rule-ranked jobs per run are sent to the
     # LLM, in batches, with a pause between calls to stay inside free-tier

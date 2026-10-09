@@ -76,6 +76,8 @@ class Profile(BaseModel):
     summary: str = ""
     experience_level: str = "fresher"
     max_years_experience: int = 2
+    # Postings older than this are dropped: old listings are often no longer hiring. 0 = keep all.
+    max_posting_age_days: int = 45
 
     target_roles: list[str] = Field(default_factory=lambda: ["Software Engineer", "Full Stack Developer"])
     primary_skills: list[str] = Field(default_factory=list)

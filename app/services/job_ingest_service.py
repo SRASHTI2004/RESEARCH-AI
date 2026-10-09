@@ -53,6 +53,11 @@ def _apply_rules(job: Job, profile: Profile) -> None:
         salary_max=job.salary_max,
         salary_currency=job.salary_currency,
     )
+    if job.source == "reddit":
+        job.red_flags = [
+            "Posted on Reddit by an individual: confirm the company and the recruiter before sharing documents",
+            *job.red_flags,
+        ]
 
 
 def _copy_posting(job: Job, posting: NormalizedJob) -> None:

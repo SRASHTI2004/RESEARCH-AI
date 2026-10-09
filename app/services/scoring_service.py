@@ -87,7 +87,8 @@ def _profile_block(profile: Profile) -> str:
         f"Headline: {profile.headline}\n"
         f"Summary: {profile.summary.strip()}\n"
         f"Experience level: {profile.experience_level} (max {profile.max_years_experience} years acceptable)\n"
-        f"Education: {profile.degree or 'not stated'}, graduation year {profile.graduation_year or 'not stated'}\n"
+        f"Education: {profile.degree or 'not stated'}, graduation year {profile.graduation_year or 'not stated'}"
+        f"{' (already graduated, not a current student)' if profile.graduation_year else ''}\n"
         f"Target roles: {', '.join(profile.target_roles)}\n"
         f"Primary skills: {', '.join(profile.primary_skills)}\n"
         f"Secondary skills: {', '.join(profile.secondary_skills)}\n"
@@ -113,7 +114,7 @@ JOBS
 
 For each job return:
 - "id": the job key in brackets (e.g. "J1")
-- "score": integer 0-100 — overall fit (skills overlap, seniority fit for a fresher, location fit). 80+ = strong match, 50-79 = worth applying, below 40 = poor fit. If the posting states a hard requirement the candidate clearly does not meet (more years of experience, a specific graduation batch, a degree or location restriction), score below 30.
+- "score": integer 0-100 — overall fit (skills overlap, seniority fit for a fresher, location fit). 80+ = strong match, 50-79 = worth applying, below 40 = poor fit. If the posting states a hard requirement the candidate clearly does not meet (more years of experience, a specific graduation batch, current university enrollment, a degree or location restriction), score below 30. Hourly gig or contract work (e.g. AI training or data annotation) and roles aimed at clearly senior engineers score below 40.
 - "reason": one sentence (max 25 words) naming the main match or mismatch. Use only facts from the posting and the candidate profile above.
 - "fresher_friendly": true only if a fresher with an internship could realistically be hired (no hard multi-year experience requirement, not a senior/lead scope).
 
