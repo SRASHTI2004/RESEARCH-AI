@@ -30,7 +30,7 @@ _JUNIOR = re.compile(
     r"\b(junior|jr|fresher|entry[- ]level|intern|internship|trainee|graduate)\b", re.IGNORECASE
 )
 _GIG = re.compile(
-    r"\bai (?:code |coding )?trainer\b|data annotat|\brlhf\b|\bper hour\b|/\s*h(?:ou)?r\b|\bhourly rate\b"
+    r"\bai (?:code |coding )?trainer\b|data annotat|\brlhf\b|\bper hour\b|\d\s*/\s*h(?:ou)?r\b|\bhourly rate\b"
     r"|\bfreelance\b|\bgig\b|\bcontract(?:or)? (?:role|position|basis)\b",
     re.IGNORECASE,
 )

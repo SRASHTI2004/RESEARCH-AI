@@ -92,8 +92,9 @@ def _profile_block(profile: Profile) -> str:
         f"Target roles: {', '.join(profile.target_roles)}\n"
         f"Primary skills: {', '.join(profile.primary_skills)}\n"
         f"Secondary skills: {', '.join(profile.secondary_skills)}\n"
-        f"Location: onsite/hybrid in {where}; remote OK: {locs.remote_ok}; "
-        f"open to global remote: {locs.open_to_global_remote}"
+        f"Location: prefers {where}"
+        f"{'; also happy to relocate anywhere in India (do not penalise other Indian cities)' if locs.accept_any_india_city else ''}"
+        f"; remote OK: {locs.remote_ok}; open to global remote: {locs.open_to_global_remote}"
     )
 
 

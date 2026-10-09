@@ -63,3 +63,13 @@ def test_salaried_role_is_not_labelled_gig():
         description="Full-time salaried role building our payments API in Python. " * 5,
     )
     assert not any("gig" in f for f in flags)
+
+
+def test_hr_in_a_url_is_not_an_hourly_rate():
+    flags = detect_red_flags(
+        title="Web Developer",
+        company="HR Plus",
+        description="Build websites in PHP. " * 10
+        + "To apply: https://weworkremotely.com/remote-jobs/hr-plus-web-dev",
+    )
+    assert not any("gig" in f for f in flags)

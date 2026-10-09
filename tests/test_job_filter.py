@@ -175,6 +175,7 @@ def test_own_graduation_batch_passes(profile):
         "Backend, Frontend, and Fullstack Engineering Expression of Interest Form",
         "Software Engineer - General Application",
         "Software Engineer - Future Opportunities",
+        "Junior Backend Developer - Future Position",
     ],
 )
 def test_talent_pools_are_not_openings(profile, title):

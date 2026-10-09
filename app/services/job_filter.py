@@ -64,7 +64,7 @@ INDIA_PLACES = (
 
 # Not a real opening: talent pools and "send us your CV" forms.
 NOT_AN_OPENING = re.compile(
-    r"expression of interest|talent (?:pool|community|network)|general application|future (?:opportunities|openings)"
+    r"expression of interest|talent (?:pool|community|network)|general application|future (?:opportunities|openings|positions?)"
     r"|join our talent|don't see (?:a|the) (?:role|position)",
     re.IGNORECASE,
 )
