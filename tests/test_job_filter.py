@@ -241,3 +241,18 @@ def test_pay_floor_reason_is_readable(profile):
     _ncr_profile(profile)
     result = _evaluate(profile, location="Gurugram", salary_max=600_000, salary_currency="INR")
     assert result.reason == "pays up to ₹6 LPA, below your ₹8 LPA minimum for Gurugram"
+
+
+@pytest.mark.parametrize(
+    "location, is_remote, passes",
+    [
+        ("Pune, Maharashtra", True, False),  # description said "remote" somewhere; location is Pune
+        ("Remote - Pune", True, True),
+        ("India", True, True),  # no city named: trust the remote flag
+        ("India", False, False),
+        ("Noida, Ghaziabad", False, True),
+    ],
+)
+def test_strict_cities_only_trust_remote_in_the_location(profile, location, is_remote, passes):
+    _ncr_profile(profile)
+    assert _evaluate(profile, location=location, is_remote=is_remote).passed is passes

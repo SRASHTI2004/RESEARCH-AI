@@ -136,8 +136,14 @@ def evaluate_location(location: str, is_remote: bool, profile: Profile) -> Locat
         return LocationVerdict(True, "preferred city", 20)
 
     if _has_any(loc, INDIA_PLACES):
-        if remote or prefs.accept_any_india_city or not cities:
+        if prefs.accept_any_india_city or not cities:
             return LocationVerdict(True, "India", 15)
+        # A named city outside the preferred ones only counts as remote when the
+        # location itself says so: aggregators set is_remote whenever "remote"
+        # appears anywhere in the description.
+        named_city = _has_any(loc, [p for p in INDIA_PLACES if p != "india"])
+        if _REMOTE_WORDS.search(loc) if named_city else remote:
+            return LocationVerdict(True, "remote (India)", 15)
         return LocationVerdict(False, "onsite in India but outside preferred cities", 0)
 
     if not remote:
