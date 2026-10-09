@@ -323,3 +323,8 @@ def test_html_to_text_and_parse_datetime_edge_cases():
     assert millis is not None and millis.year == 2026
     naive = parse_datetime("2026-10-01T00:00:00")
     assert naive is not None and naive.tzinfo is not None
+
+
+def test_html_to_text_repairs_double_encoded_utf8():
+    assert html_to_text("Software Engineer â\u0080\u0093 Intern") == "Software Engineer – Intern"
+    assert html_to_text("Café – ok") == "Café – ok"

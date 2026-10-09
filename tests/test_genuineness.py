@@ -73,3 +73,20 @@ def test_hr_in_a_url_is_not_an_hourly_rate():
         + "To apply: https://weworkremotely.com/remote-jobs/hr-plus-web-dev",
     )
     assert not any("gig" in f for f in flags)
+
+
+@pytest.mark.parametrize(
+    "company", ["XL Recruiters", "ABC Staffing Solutions", "Jobgether", "Prime Placement Services"]
+)
+def test_recruitment_agencies_are_flagged(company):
+    flags = detect_red_flags(
+        title="Backend Developer", company=company, description="Python backend role. " * 15
+    )
+    assert any("recruitment agency" in f for f in flags)
+
+
+def test_regular_company_is_not_flagged_as_agency():
+    flags = detect_red_flags(
+        title="Backend Developer", company="Razorpay", description="Python backend role. " * 15
+    )
+    assert not any("recruitment agency" in f for f in flags)

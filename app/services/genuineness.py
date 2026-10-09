@@ -34,6 +34,11 @@ _GIG = re.compile(
     r"|\bfreelance\b|\bgig\b|\bcontract(?:or)? (?:role|position|basis)\b",
     re.IGNORECASE,
 )
+# Staffing firms post on behalf of an unnamed client.
+_AGENCY = re.compile(
+    r"\b(recruit(?:ers?|ment)|staffing|placements?|consultan(?:cy|ts)|manpower|hr solutions|talent solutions)\b|^jobgether$",
+    re.IGNORECASE,
+)
 _VAGUE_COMPANY = {"", "confidential", "stealth", "undisclosed", "hiring company", "company", "n/a", "na"}
 
 # Annual pay above which a junior/intern role is suspicious.
@@ -68,6 +73,9 @@ def detect_red_flags(
 
     if _GIG.search(title) or _GIG.search(description):
         flags.append("Looks like hourly/contract gig work, not a salaried job")
+
+    if _AGENCY.search(company.strip()):
+        flags.append("Posted by a recruitment agency: find out who the actual employer is before applying")
 
     if company.strip().lower() in _VAGUE_COMPANY or len(company.strip()) < 2:
         flags.append("Company name is missing or vague")

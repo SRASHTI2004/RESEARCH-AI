@@ -11,12 +11,25 @@ _BLANK_LINES = re.compile(r"\n\s*\n+")
 MAX_DESCRIPTION_CHARS = 20_000
 
 
+# UTF-8 bytes that were decoded as Latin-1 upstream ("â" instead of "–").
+_MOJIBAKE = re.compile("[ÂÃâ][-¿]")
+
+
+def fix_mojibake(text: str) -> str:
+    if not _MOJIBAKE.search(text):
+        return text
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+
+
 def html_to_text(raw: str | None) -> str:
     """Good-enough HTML → plain text for job descriptions. Unescapes first
     because Greenhouse returns HTML that is itself entity-escaped."""
     if not raw:
         return ""
-    text = html.unescape(raw)
+    text = fix_mojibake(html.unescape(raw))
     text = _BLOCK_TAGS.sub("\n", text)
     text = _LI.sub("\n- ", text)
     text = _TAGS.sub(" ", text)
